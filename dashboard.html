@@ -1,0 +1,4697 @@
+<title>AI Crawler Detection</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-raised: #212120;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --accent: #3987e5;
+
+    --cat-human: #3987e5;
+    --cat-undeclared: #d95926;
+    --cat-verified: #199e70;
+    --cat-spoofed: #c98500;
+    --cat-search: #9085e9;
+    --cat-evader: #e66767;
+
+    --seq-100: #cde2fb; --seq-200: #9ec5f4; --seq-300: #6da7ec; --seq-400: #3987e5;
+    --seq-500: #256abf; --seq-600: #184f95; --seq-700: #0d366b;
+
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+
+    --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #f9f9f7;
+      --surface: #fcfcfb;
+      --surface-raised: #ffffff;
+      --text-primary: #0b0b0b;
+      --text-secondary: #52514e;
+      --text-muted: #898781;
+      --grid: #e1e0d9;
+      --baseline: #c3c2b7;
+      --border: rgba(11,11,11,0.10);
+      --accent: #2a78d6;
+
+      --cat-human: #2a78d6;
+      --cat-undeclared: #eb6834;
+      --cat-verified: #1baf7a;
+      --cat-spoofed: #eda100;
+      --cat-search: #6250d6;
+      --cat-evader: #e34948;
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f9f9f7;
+    --surface: #fcfcfb;
+    --surface-raised: #ffffff;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --accent: #2a78d6;
+
+    --cat-human: #2a78d6;
+    --cat-undeclared: #eb6834;
+    --cat-verified: #1baf7a;
+    --cat-spoofed: #eda100;
+    --cat-search: #6250d6;
+    --cat-evader: #e34948;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .page { max-width: 1180px; margin: 0 auto; padding-block: 20px 60px; }
+
+  a { color: var(--accent); }
+
+  header.top { margin-bottom: 18px; }
+  header.top h1 { font-size: 1.7rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header.top p.sub { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
+
+  .disclaimer {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+  .disclaimer b { color: var(--text-primary); }
+
+  nav.tabs {
+    display: flex;
+    gap: 4px;
+    margin: 20px 0 16px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  nav.tabs button {
+    appearance: none;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 9px 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  nav.tabs button:hover { color: var(--text-primary); }
+  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  section.tabpanel { display: none; }
+  section.tabpanel.active { display: block; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    margin-bottom: 16px;
+    min-width: 0;
+  }
+  .panel h2 { font-size: 1rem; margin: 0 0 2px; }
+  .panel p.hint { margin: 0 0 12px; color: var(--text-muted); font-size: 0.8rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 820px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 14px 12px;
+    min-width: 0;
+  }
+  .stat-tile .label { color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .stat-tile .value { font-size: 1.6rem; font-weight: 600; line-height: 1.1; }
+  .stat-tile .value small { font-size: 0.95rem; color: var(--text-secondary); font-weight: 500; }
+
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  svg.chart text { fill: var(--text-secondary); font-size: 11px; font-family: var(--font); }
+  svg.chart .axis-line { stroke: var(--baseline); stroke-width: 1; }
+  svg.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 10px; font-size: 0.78rem; color: var(--text-secondary); }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    z-index: 50;
+    max-width: 260px;
+    line-height: 1.4;
+    display: none;
+  }
+  .tooltip b { color: var(--text-primary); }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  table.data-table th, table.data-table td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.data-table th { color: var(--text-muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+  table.data-table td.num, table.data-table th.num { font-variant-numeric: tabular-nums; text-align: right; }
+  .table-scroll { overflow-x: auto; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #0b0b0b;
+  }
+  .risk-pill { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .risk-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+  .violations-list, .cluster-list { list-style: none; margin: 0; padding: 0; }
+  .cluster-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--surface-raised);
+  }
+  .cluster-card .title { font-weight: 600; font-size: 0.86rem; margin-bottom: 6px; }
+  .cluster-card .meta { color: var(--text-secondary); font-size: 0.8rem; line-height: 1.5; }
+  .mono { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 0.78rem; word-break: break-all; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .controls input[type=search], .controls select {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 0.82rem;
+  }
+  .controls input[type=search] { flex: 1 1 220px; min-width: 0; }
+
+  .client-row { cursor: pointer; }
+  .client-row:hover { background: var(--surface-raised); }
+  .detail-row td { background: var(--surface-raised); padding: 12px 14px; }
+  .detail-row[hidden] { display: none; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+  .detail-grid h4 { margin: 0 0 6px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
+  .detail-grid ul { margin: 0; padding-left: 18px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; }
+  .analyst-note { font-size: 0.83rem; color: var(--text-secondary); line-height: 1.55; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--text-secondary); }
+  th.sortable .arrow { opacity: 0.5; margin-left: 2px; }
+
+  footer.bottom { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.78rem; line-height: 1.6; }
+</style>
+
+<div class="page">
+  <header class="top">
+    <h1>AI-Powered Crawler Detection</h1>
+    <p class="sub">Rules vs. ML vs. anomaly detection vs. hybrid, on synthetic access-log traffic — including a block-evasion identity-switch scenario.</p>
+    <div class="disclaimer">
+      <b>All data on this page is synthetic</b>, generated for this demo with a fixed random seed — no real traffic, companies or crawlers are represented, and every crawler/operator name (AlphaBot, NovaCrawler, ByteHarvest, etc.) is fictional.
+      A high risk score is a reason to <b>investigate</b>, never proof of bad intent.
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="methods">Method comparison</button>
+    <button data-tab="evasion">Block evasion</button>
+    <button data-tab="clients">All clients</button>
+  </nav>
+
+  <section class="tabpanel active" id="tab-overview">
+    <div class="stat-grid" id="stat-grid"></div>
+    <div class="grid-2">
+      <div class="panel">
+        <h2>Traffic share by true category</h2>
+        <p class="hint">Requests, not clients — a handful of high-volume crawlers can outweigh many low-volume humans.</p>
+        <svg class="chart" id="chart-traffic-share"></svg>
+      </div>
+      <div class="panel">
+        <h2>Claimed AI-crawler identities: verified vs. spoofed</h2>
+        <p class="hint">Clients per claimed identity name, by whether their IP/ASN/TLS checked out.</p>
+        <svg class="chart" id="chart-identities"></svg>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>robots.txt-disallowed path hits</h2>
+      <p class="hint">Clients that requested <span class="mono">/admin/</span>, <span class="mono">/private/</span> or <span class="mono">/api/</span> paths at least once.</p>
+      <div class="table-scroll">
+        <table class="data-table" id="table-violations"></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-methods">
+    <div class="panel">
+      <h2>Recall by true category, per method</h2>
+      <p class="hint">Of each true category, the fraction each method correctly caught. Anomaly detection has no category labels of its own — its bars show flag rate (risk ≥ 50) instead of recall.</p>
+      <svg class="chart" id="chart-method-recall"></svg>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h2>ML feature importance</h2>
+        <p class="hint">Random-forest Gini importance, full model fit on all 80 clients.</p>
+        <svg class="chart" id="chart-feature-importance"></svg>
+      </div>
+      <div class="panel">
+        <h2>Anomaly detection (unsupervised)</h2>
+        <p class="hint" id="anomaly-auc-hint"></p>
+        <svg class="chart" id="chart-anomaly-flagrate"></svg>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Confusion matrices</h2>
+      <p class="hint">Rows = true category, columns = predicted. Cell shade = row-normalized share.</p>
+      <div id="confusion-matrices"></div>
+    </div>
+    <div class="panel">
+      <h2>Overall accuracy by method</h2>
+      <svg class="chart" id="chart-overall-accuracy"></svg>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-evasion">
+    <div class="stat-grid" id="evasion-stats"></div>
+    <div class="panel">
+      <h2>Suspected operator clusters</h2>
+      <p class="hint">A blocked declared-crawler identity, linked to the disguised clients that appeared afterward chasing the same pages.</p>
+      <ul class="cluster-list" id="cluster-list"></ul>
+    </div>
+  </section>
+
+  <section class="tabpanel" id="tab-clients">
+    <div class="panel">
+      <h2>All clients</h2>
+      <p class="hint">Click a row to expand its reasons and analyst note. True category is the synthetic ground truth — shown here for evaluation, not something a real detector would have.</p>
+      <div class="controls">
+        <input type="search" id="filter-search" placeholder="Search IP, ASN, user agent, claimed identity…">
+        <select id="filter-category"><option value="">All true categories</option></select>
+        <select id="filter-verdict"><option value="">All hybrid verdicts</option></select>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" id="table-clients">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bottom">
+    Synthetic demo data, fixed random seed. No real traffic, companies or AI crawlers are represented — all crawler/operator names are fictional.
+    Risk scores and verdicts are a prioritization aid for a human reviewer, not an automated judgment of intent.
+  </footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script id="dashboard-data" type="application/json">{
+  "meta": {
+    "generated_at": "2026-10-19T21:02:44.247984+00:00",
+    "model_name": "RandomForest",
+    "disclaimer": "All data on this dashboard is SYNTHETIC, generated for a demo. No real traffic, companies, or crawlers are represented -- all crawler/operator names are fictional. A high risk score is a reason to investigate, never proof of bad intent."
+  },
+  "headline_stats": {
+    "total_clients": 80,
+    "total_requests": 5944,
+    "pct_ai_crawler_traffic": 25.94,
+    "pct_ai_crawler_claims_spoofed": 40.0,
+    "bot_bandwidth_bytes": 89766480,
+    "bot_bandwidth_pct": 29.3
+  },
+  "traffic_share_by_category": {
+    "Human": 2136,
+    "Undeclared bot": 1326,
+    "Verified AI crawler": 830,
+    "Search engine": 770,
+    "Spoofed crawler": 712,
+    "Block evader": 170
+  },
+  "top_claimed_identities": [
+    {
+      "identity": "AlphaBot",
+      "is_ai_crawler": true,
+      "verified_count": 3,
+      "spoofed_count": 3,
+      "total_requests": 671
+    },
+    {
+      "identity": "NovaCrawler",
+      "is_ai_crawler": true,
+      "verified_count": 2,
+      "spoofed_count": 3,
+      "total_requests": 472
+    },
+    {
+      "identity": "QueryWeaver",
+      "is_ai_crawler": true,
+      "verified_count": 2,
+      "spoofed_count": 2,
+      "total_requests": 378
+    },
+    {
+      "identity": "ByteHarvest",
+      "is_ai_crawler": true,
+      "verified_count": 2,
+      "spoofed_count": 0,
+      "total_requests": 8
+    },
+    {
+      "identity": "DeepIndexer",
+      "is_ai_crawler": true,
+      "verified_count": 3,
+      "spoofed_count": 0,
+      "total_requests": 13
+    },
+    {
+      "identity": "SeekerBot",
+      "is_ai_crawler": false,
+      "verified_count": 5,
+      "spoofed_count": 0,
+      "total_requests": 529
+    },
+    {
+      "identity": "FinderCrawl",
+      "is_ai_crawler": false,
+      "verified_count": 3,
+      "spoofed_count": 0,
+      "total_requests": 241
+    }
+  ],
+  "robots_violations": [
+    {
+      "client_key_str": "182.185.126.73||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 77
+    },
+    {
+      "client_key_str": "215.50.62.53||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 67
+    },
+    {
+      "client_key_str": "65.206.136.65||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 58
+    },
+    {
+      "client_key_str": "184.60.86.64||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 54
+    },
+    {
+      "client_key_str": "182.56.208.161||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 48
+    },
+    {
+      "client_key_str": "68.5.249.7||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 39
+    },
+    {
+      "client_key_str": "216.197.101.105||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "category": "Spoofed crawler",
+      "claimed_identity": "AlphaBot",
+      "disallowed_hits": 31
+    },
+    {
+      "client_key_str": "114.81.82.158||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "category": "Spoofed crawler",
+      "claimed_identity": "NovaCrawler",
+      "disallowed_hits": 30
+    },
+    {
+      "client_key_str": "182.188.37.250||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "category": "Spoofed crawler",
+      "claimed_identity": "AlphaBot",
+      "disallowed_hits": 28
+    },
+    {
+      "client_key_str": "110.76.105.182||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 27
+    },
+    {
+      "client_key_str": "168.124.115.119||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 27
+    },
+    {
+      "client_key_str": "200.44.187.13||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "category": "Spoofed crawler",
+      "claimed_identity": "AlphaBot",
+      "disallowed_hits": 25
+    },
+    {
+      "client_key_str": "61.112.244.55||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "category": "Spoofed crawler",
+      "claimed_identity": "NovaCrawler",
+      "disallowed_hits": 25
+    },
+    {
+      "client_key_str": "68.241.106.129||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "category": "Spoofed crawler",
+      "claimed_identity": "NovaCrawler",
+      "disallowed_hits": 22
+    },
+    {
+      "client_key_str": "60.169.0.173||Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "category": "Spoofed crawler",
+      "claimed_identity": "QueryWeaver",
+      "disallowed_hits": 21
+    },
+    {
+      "client_key_str": "21.203.57.66||Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "category": "Spoofed crawler",
+      "claimed_identity": "QueryWeaver",
+      "disallowed_hits": 14
+    },
+    {
+      "client_key_str": "156.96.79.98||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Block evader",
+      "claimed_identity": null,
+      "disallowed_hits": 7
+    },
+    {
+      "client_key_str": "141.134.165.118||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Block evader",
+      "claimed_identity": null,
+      "disallowed_hits": 7
+    },
+    {
+      "client_key_str": "122.105.129.163||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 6
+    },
+    {
+      "client_key_str": "91.160.63.38||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Block evader",
+      "claimed_identity": null,
+      "disallowed_hits": 6
+    },
+    {
+      "client_key_str": "193.18.45.248||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Block evader",
+      "claimed_identity": null,
+      "disallowed_hits": 5
+    },
+    {
+      "client_key_str": "95.205.98.104||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Block evader",
+      "claimed_identity": null,
+      "disallowed_hits": 5
+    },
+    {
+      "client_key_str": "66.249.68.86||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "category": "Search engine",
+      "claimed_identity": "SeekerBot",
+      "disallowed_hits": 4
+    },
+    {
+      "client_key_str": "157.225.170.150||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Block evader",
+      "claimed_identity": null,
+      "disallowed_hits": 4
+    },
+    {
+      "client_key_str": "20.15.241.73||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "category": "Verified AI crawler",
+      "claimed_identity": "AlphaBot",
+      "disallowed_hits": 3
+    },
+    {
+      "client_key_str": "44.221.0.190||Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "category": "Verified AI crawler",
+      "claimed_identity": "QueryWeaver",
+      "disallowed_hits": 3
+    },
+    {
+      "client_key_str": "44.221.0.242||Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "category": "Verified AI crawler",
+      "claimed_identity": "QueryWeaver",
+      "disallowed_hits": 2
+    },
+    {
+      "client_key_str": "66.249.66.17||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "category": "Search engine",
+      "claimed_identity": "SeekerBot",
+      "disallowed_hits": 2
+    },
+    {
+      "client_key_str": "157.55.39.186||Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm)",
+      "category": "Search engine",
+      "claimed_identity": "FinderCrawl",
+      "disallowed_hits": 2
+    },
+    {
+      "client_key_str": "66.249.66.214||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "category": "Search engine",
+      "claimed_identity": "SeekerBot",
+      "disallowed_hits": 2
+    },
+    {
+      "client_key_str": "32.247.206.141||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Block evader",
+      "claimed_identity": null,
+      "disallowed_hits": 2
+    },
+    {
+      "client_key_str": "20.15.240.68||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "category": "Verified AI crawler",
+      "claimed_identity": "AlphaBot",
+      "disallowed_hits": 2
+    },
+    {
+      "client_key_str": "34.102.137.65||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "category": "Verified AI crawler",
+      "claimed_identity": "NovaCrawler",
+      "disallowed_hits": 2
+    },
+    {
+      "client_key_str": "34.102.136.1||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "category": "Verified AI crawler",
+      "claimed_identity": "NovaCrawler",
+      "disallowed_hits": 2
+    },
+    {
+      "client_key_str": "18.97.0.137||ByteHarvest/2.0 (+https://byteharvestdata.example/faq)",
+      "category": "Verified AI crawler",
+      "claimed_identity": "ByteHarvest",
+      "disallowed_hits": 1
+    },
+    {
+      "client_key_str": "102.213.207.6||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "category": "Block evader",
+      "claimed_identity": null,
+      "disallowed_hits": 1
+    },
+    {
+      "client_key_str": "18.97.0.62||ByteHarvest/2.0 (+https://byteharvestdata.example/faq)",
+      "category": "Verified AI crawler",
+      "claimed_identity": "ByteHarvest",
+      "disallowed_hits": 1
+    },
+    {
+      "client_key_str": "20.15.241.157||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "category": "Verified AI crawler",
+      "claimed_identity": "AlphaBot",
+      "disallowed_hits": 1
+    },
+    {
+      "client_key_str": "46.34.130.225||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "category": "Undeclared bot",
+      "claimed_identity": null,
+      "disallowed_hits": 1
+    },
+    {
+      "client_key_str": "66.249.72.47||Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+      "category": "Verified AI crawler",
+      "claimed_identity": "DeepIndexer",
+      "disallowed_hits": 1
+    },
+    {
+      "client_key_str": "66.249.68.161||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "category": "Search engine",
+      "claimed_identity": "SeekerBot",
+      "disallowed_hits": 1
+    },
+    {
+      "client_key_str": "66.249.72.226||Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+      "category": "Verified AI crawler",
+      "claimed_identity": "DeepIndexer",
+      "disallowed_hits": 1
+    }
+  ],
+  "categories": [
+    "Verified AI crawler",
+    "Spoofed crawler",
+    "Block evader",
+    "Undeclared bot",
+    "Search engine",
+    "Human"
+  ],
+  "method_comparison": {
+    "rules": {
+      "report": {
+        "Verified AI crawler": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 12.0
+        },
+        "Spoofed crawler": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Block evader": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Undeclared bot": {
+          "precision": 1.0,
+          "recall": 0.8,
+          "f1-score": 0.8888888888888888,
+          "support": 10.0
+        },
+        "Search engine": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Human": {
+          "precision": 0.9444444444444444,
+          "recall": 1.0,
+          "f1-score": 0.9714285714285714,
+          "support": 34.0
+        },
+        "accuracy": 0.975,
+        "macro avg": {
+          "precision": 0.9907407407407408,
+          "recall": 0.9666666666666667,
+          "f1-score": 0.9767195767195768,
+          "support": 80.0
+        },
+        "weighted avg": {
+          "precision": 0.976388888888889,
+          "recall": 0.975,
+          "f1-score": 0.9739682539682539,
+          "support": 80.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          12,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          8,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          8,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          8,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          34
+        ]
+      ]
+    },
+    "ml": {
+      "report": {
+        "Verified AI crawler": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 12.0
+        },
+        "Spoofed crawler": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Block evader": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Undeclared bot": {
+          "precision": 1.0,
+          "recall": 0.9,
+          "f1-score": 0.9473684210526315,
+          "support": 10.0
+        },
+        "Search engine": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Human": {
+          "precision": 0.9714285714285714,
+          "recall": 1.0,
+          "f1-score": 0.9855072463768116,
+          "support": 34.0
+        },
+        "accuracy": 0.9875,
+        "macro avg": {
+          "precision": 0.9952380952380953,
+          "recall": 0.9833333333333334,
+          "f1-score": 0.9888126112382406,
+          "support": 80.0
+        },
+        "weighted avg": {
+          "precision": 0.9878571428571428,
+          "recall": 0.9875,
+          "f1-score": 0.9872616323417238,
+          "support": 80.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          12,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          8,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          9,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          8,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          34
+        ]
+      ],
+      "model_name": "RandomForest"
+    },
+    "anomaly": {
+      "roc_auc": 0.916,
+      "binary_report": {
+        "Human": {
+          "precision": 0.75,
+          "recall": 0.8823529411764706,
+          "f1-score": 0.8108108108108109,
+          "support": 34.0
+        },
+        "Any bot/crawler": {
+          "precision": 0.9,
+          "recall": 0.782608695652174,
+          "f1-score": 0.8372093023255814,
+          "support": 46.0
+        },
+        "accuracy": 0.825,
+        "macro avg": {
+          "precision": 0.825,
+          "recall": 0.8324808184143222,
+          "f1-score": 0.8240100565681961,
+          "support": 80.0
+        },
+        "weighted avg": {
+          "precision": 0.83625,
+          "recall": 0.825,
+          "f1-score": 0.825989943431804,
+          "support": 80.0
+        }
+      },
+      "binary_confusion_matrix": [
+        [
+          30,
+          4
+        ],
+        [
+          10,
+          36
+        ]
+      ],
+      "flag_rate_by_category": {
+        "Block evader": 1.0,
+        "Human": 0.118,
+        "Search engine": 0.375,
+        "Spoofed crawler": 1.0,
+        "Undeclared bot": 1.0,
+        "Verified AI crawler": 0.583
+      },
+      "mean_risk_by_category": {
+        "Block evader": 63.4,
+        "Human": 25.5,
+        "Search engine": 46.9,
+        "Spoofed crawler": 80.2,
+        "Undeclared bot": 80.0,
+        "Verified AI crawler": 63.3
+      }
+    },
+    "hybrid": {
+      "report": {
+        "Verified AI crawler": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 12.0
+        },
+        "Spoofed crawler": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Block evader": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Undeclared bot": {
+          "precision": 1.0,
+          "recall": 0.9,
+          "f1-score": 0.9473684210526315,
+          "support": 10.0
+        },
+        "Search engine": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 8.0
+        },
+        "Human": {
+          "precision": 0.9714285714285714,
+          "recall": 1.0,
+          "f1-score": 0.9855072463768116,
+          "support": 34.0
+        },
+        "accuracy": 0.9875,
+        "macro avg": {
+          "precision": 0.9952380952380953,
+          "recall": 0.9833333333333334,
+          "f1-score": 0.9888126112382406,
+          "support": 80.0
+        },
+        "weighted avg": {
+          "precision": 0.9878571428571428,
+          "recall": 0.9875,
+          "f1-score": 0.9872616323417238,
+          "support": 80.0
+        }
+      },
+      "confusion_matrix": [
+        [
+          12,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          8,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          9,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          8,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          34
+        ]
+      ]
+    }
+  },
+  "feature_importance": {
+    "asset_ratio": 0.12046870740752674,
+    "asn_matches_declared_asn_num": 0.08567449263462565,
+    "ip_matches_declared_range_num": 0.07589876208675676,
+    "disallowed_hits": 0.07422903613876126,
+    "request_rate_per_min": 0.06123939343525375,
+    "timing_cv": 0.06112478565072869,
+    "ja4_consistency": 0.05908223425013875,
+    "claims_known_identity": 0.0566339296420669,
+    "unique_paths": 0.04362528968141428,
+    "sequential_score": 0.042991162406038286,
+    "path_jaccard_with_blocked": 0.0426644791170578,
+    "linked_to_blocked_client_num": 0.04065326070567344,
+    "error_rate": 0.03781428329475394,
+    "total_bytes": 0.030989563413228668,
+    "n_requests": 0.02613660649679782,
+    "ja4_matches_expected_bot_num": 0.02605168559947111,
+    "robots_txt_fetched_num": 0.02189206277998398,
+    "accept_lang_present": 0.02045418250129988,
+    "header_anomaly_count": 0.01764970045099591,
+    "ja4_browser_mismatch_num": 0.017476669162122472,
+    "looks_like_browser_ja4_num": 0.014796103282749733,
+    "sec_ch_ua_present": 0.012354740461706093,
+    "looks_like_script_ja4_num": 0.005450381366131667,
+    "block_rate_num": 0.004648488034716379
+  },
+  "block_evasion": {
+    "linking_eval": {
+      "total_true_block_evaders": 8,
+      "flagged_as_linked": 8,
+      "correctly_linked_to_origin": 8,
+      "linking_recall": 1.0,
+      "linking_precision": 1.0,
+      "false_positive_links": 0
+    },
+    "clusters": [
+      {
+        "blocked_client_key": "18.97.0.137||ByteHarvest/2.0 (+https://byteharvestdata.example/faq)",
+        "n_disguised_clients": 2,
+        "disguised_client_keys": [
+          "141.134.165.118||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+          "193.18.45.248||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+        ],
+        "distinct_asns": 2,
+        "avg_link_confidence": 0.666
+      },
+      {
+        "blocked_client_key": "18.97.0.62||ByteHarvest/2.0 (+https://byteharvestdata.example/faq)",
+        "n_disguised_clients": 2,
+        "disguised_client_keys": [
+          "156.96.79.98||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+          "91.160.63.38||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+        ],
+        "distinct_asns": 2,
+        "avg_link_confidence": 0.805
+      },
+      {
+        "blocked_client_key": "66.249.72.226||Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+        "n_disguised_clients": 2,
+        "disguised_client_keys": [
+          "102.213.207.6||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+          "157.225.170.150||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+        ],
+        "distinct_asns": 2,
+        "avg_link_confidence": 0.729
+      },
+      {
+        "blocked_client_key": "66.249.72.47||Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+        "n_disguised_clients": 2,
+        "disguised_client_keys": [
+          "32.247.206.141||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+          "95.205.98.104||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+        ],
+        "distinct_asns": 2,
+        "avg_link_confidence": 0.784
+      }
+    ]
+  },
+  "tricky_cases": [
+    {
+      "client_key_str": "122.105.129.163||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "subtype": "undeclared_scraper_impersonated",
+      "category": "Undeclared bot",
+      "rules_label": "Human",
+      "ml_pred": "Undeclared bot",
+      "hybrid_label": "Undeclared bot",
+      "anomaly_flag": true,
+      "anomaly_risk": 76.2
+    },
+    {
+      "client_key_str": "129.82.51.39||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "subtype": "tricky:privacy_browser",
+      "category": "Human",
+      "rules_label": "Human",
+      "ml_pred": "Human",
+      "hybrid_label": "Human",
+      "anomaly_flag": true,
+      "anomaly_risk": 70.0
+    },
+    {
+      "client_key_str": "141.129.168.204||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "subtype": "tricky:office_nat",
+      "category": "Human",
+      "rules_label": "Human",
+      "ml_pred": "Human",
+      "hybrid_label": "Human",
+      "anomaly_flag": true,
+      "anomaly_risk": 97.5
+    },
+    {
+      "client_key_str": "46.34.130.225||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "subtype": "tricky:stealthy_scraper",
+      "category": "Undeclared bot",
+      "rules_label": "Human",
+      "ml_pred": "Human",
+      "hybrid_label": "Human",
+      "anomaly_flag": true,
+      "anomaly_risk": 67.5
+    },
+    {
+      "client_key_str": "74.137.108.100||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+      "subtype": "tricky:screen_reader",
+      "category": "Human",
+      "rules_label": "Human",
+      "ml_pred": "Human",
+      "hybrid_label": "Human",
+      "anomaly_flag": false,
+      "anomaly_risk": 17.5
+    }
+  ],
+  "clients": [
+    {
+      "client_key": "102.179.62.223||Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "ip": "102.179.62.223",
+      "asn": "AS65033",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 88,
+      "total_bytes": 9123953,
+      "request_rate_per_min": 0.49,
+      "timing_cv": 5.15,
+      "asset_ratio": 0.648,
+      "sequential_score": 0.207,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.977,
+      "anomaly_risk": 12.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 98.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "102.213.207.6||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "102.213.207.6",
+      "asn": "AS64864",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Block evader",
+      "subtype": "block_evader",
+      "operator_id": "operator_04",
+      "n_requests": 18,
+      "total_bytes": 640629,
+      "request_rate_per_min": 6.03,
+      "timing_cv": 0.78,
+      "asset_ratio": 0.111,
+      "sequential_score": 0.071,
+      "disallowed_hits": 1,
+      "robots_txt_fetched": false,
+      "rules_score": 90.0,
+      "rules_label": "Block evader",
+      "rules_reasons": [
+        "Appeared 14 minutes after a declared crawler was blocked, requesting 67% of the same pages from a new IP/ASN under a generic browser identity -- consistent with block evasion"
+      ],
+      "ml_pred": "Block evader",
+      "ml_confidence": 0.921,
+      "anomaly_risk": 61.3,
+      "anomaly_flag": true,
+      "hybrid_label": "Block evader",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Linked to a recently blocked declared crawler identity (treated as decisive)"
+      ],
+      "linked_to_blocked_client": true,
+      "suspected_operator_cluster": [
+        "66.249.72.226",
+        "Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)"
+      ],
+      "analyst_note": null
+    },
+    {
+      "client_key": "107.184.209.108||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "107.184.209.108",
+      "asn": "AS64765",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 45,
+      "total_bytes": 5037076,
+      "request_rate_per_min": 0.09,
+      "timing_cv": 4.1,
+      "asset_ratio": 0.644,
+      "sequential_score": 0.214,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.993,
+      "anomaly_risk": 15.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 99.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "110.76.105.182||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "ip": "110.76.105.182",
+      "asn": "AS65106",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper",
+      "operator_id": null,
+      "n_requests": 83,
+      "total_bytes": 2201819,
+      "request_rate_per_min": 60.0,
+      "timing_cv": 0.29,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.778,
+      "disallowed_hits": 27,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Undeclared bot",
+      "rules_reasons": [
+        "Claims to be edge but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser",
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Never loaded any CSS/JS/image sub-resources despite claiming to be a browser",
+        "missing Accept-Language despite claiming a browser",
+        "missing Sec-CH-UA despite claiming edge",
+        "claims edge but 94% of requests fingerprint as a scripting library, not a browser",
+        "Requested 27 robots.txt-disallowed path(s)"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.678,
+      "anomaly_risk": 96.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 110.76.105.182 (ASN AS65106), sending 83 requests at ~60.0 req/min. The rule-based check flagged: Claims to be edge but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser; Request timing is unusually regular (low variance) -- typical of a script, not a person. The machine-learning model independently predicted \"Undeclared bot\" (68% confidence). It also scored as a behavioral outlier relative to the rest of the traffic (anomaly risk 96/100), even considering its overall profile. Overall hybrid risk score: 100/100 (\"Undeclared bot\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "114.81.82.158||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "ip": "114.81.82.158",
+      "asn": "AS65295",
+      "user_agent": "Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "claimed_identity": "NovaCrawler",
+      "true_category": "Spoofed crawler",
+      "subtype": "spoofed",
+      "operator_id": null,
+      "n_requests": 96,
+      "total_bytes": 2676970,
+      "request_rate_per_min": 22.77,
+      "timing_cv": 0.25,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.469,
+      "disallowed_hits": 30,
+      "robots_txt_fetched": false,
+      "rules_score": 96.0,
+      "rules_label": "Spoofed crawler",
+      "rules_reasons": [
+        "Claims to be NovaCrawler but its IP address falls outside NovaCrawler's declared ranges",
+        "Claims to be NovaCrawler but its network (ASN) doesn't match NovaCrawler's declared infrastructure",
+        "Claims to be NovaCrawler but its TLS (JA4) fingerprint doesn't match NovaCrawler's expected client",
+        "Requested 30 robots.txt-disallowed path(s) despite claiming to be NovaCrawler"
+      ],
+      "ml_pred": "Spoofed crawler",
+      "ml_confidence": 0.983,
+      "anomaly_risk": 80.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Spoofed crawler",
+      "hybrid_score": 98.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "115.18.48.58||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "115.18.48.58",
+      "asn": "AS64947",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 38,
+      "total_bytes": 3553955,
+      "request_rate_per_min": 24.52,
+      "timing_cv": 0.94,
+      "asset_ratio": 0.632,
+      "sequential_score": 0.154,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.875,
+      "anomaly_risk": 32.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 87.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "119.82.82.227||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "119.82.82.227",
+      "asn": "AS65273",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 39,
+      "total_bytes": 3321948,
+      "request_rate_per_min": 5.52,
+      "timing_cv": 1.04,
+      "asset_ratio": 0.538,
+      "sequential_score": 0.059,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.945,
+      "anomaly_risk": 11.3,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 94.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "12.212.175.89||Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36",
+      "ip": "12.212.175.89",
+      "asn": "AS64869",
+      "user_agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 60,
+      "total_bytes": 5848873,
+      "request_rate_per_min": 0.19,
+      "timing_cv": 2.99,
+      "asset_ratio": 0.7,
+      "sequential_score": 0.059,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.969,
+      "anomaly_risk": 27.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 97.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "120.74.55.234||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+      "ip": "120.74.55.234",
+      "asn": "AS65169",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 32,
+      "total_bytes": 2936608,
+      "request_rate_per_min": 15.87,
+      "timing_cv": 1.28,
+      "asset_ratio": 0.594,
+      "sequential_score": 0.182,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.932,
+      "anomaly_risk": 26.2,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 93.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "122.105.129.163||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "122.105.129.163",
+      "asn": "AS64671",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper_impersonated",
+      "operator_id": null,
+      "n_requests": 96,
+      "total_bytes": 3203761,
+      "request_rate_per_min": 32.36,
+      "timing_cv": 0.25,
+      "asset_ratio": 0.052,
+      "sequential_score": 0.927,
+      "disallowed_hits": 6,
+      "robots_txt_fetched": false,
+      "rules_score": 42.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Requested 6 robots.txt-disallowed path(s)",
+        "Signals present but not strong enough to outweigh human-like browsing overall"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.534,
+      "anomaly_risk": 76.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 53.0,
+      "hybrid_reasons": [
+        "Rules said \"Human\", but the ML model disagreed with 53% confidence and was trusted"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "129.82.51.39||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "129.82.51.39",
+      "asn": "AS65236",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "tricky:privacy_browser",
+      "operator_id": null,
+      "n_requests": 53,
+      "total_bytes": 5133259,
+      "request_rate_per_min": 0.11,
+      "timing_cv": 5.37,
+      "asset_ratio": 0.547,
+      "sequential_score": 0.043,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 6.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "missing Accept-Language despite claiming a browser",
+        "Signals present but not strong enough to outweigh human-like browsing overall"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.839,
+      "anomaly_risk": 70.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Human",
+      "hybrid_score": 84.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 70/100) despite otherwise looking like Human -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "141.129.168.204||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "141.129.168.204",
+      "asn": "AS64871",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "tricky:office_nat",
+      "operator_id": null,
+      "n_requests": 298,
+      "total_bytes": 26865923,
+      "request_rate_per_min": 1.32,
+      "timing_cv": 7.15,
+      "asset_ratio": 0.55,
+      "sequential_score": 0.242,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.775,
+      "anomaly_risk": 97.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Human",
+      "hybrid_score": 78.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 98/100) despite otherwise looking like Human -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "141.134.165.118||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "141.134.165.118",
+      "asn": "AS65263",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Block evader",
+      "subtype": "block_evader",
+      "operator_id": "operator_03",
+      "n_requests": 24,
+      "total_bytes": 644438,
+      "request_rate_per_min": 10.07,
+      "timing_cv": 1.13,
+      "asset_ratio": 0.125,
+      "sequential_score": 0.385,
+      "disallowed_hits": 7,
+      "robots_txt_fetched": false,
+      "rules_score": 90.0,
+      "rules_label": "Block evader",
+      "rules_reasons": [
+        "Appeared 10 minutes after a declared crawler was blocked, requesting 57% of the same pages from a new IP/ASN under a generic browser identity -- consistent with block evasion"
+      ],
+      "ml_pred": "Block evader",
+      "ml_confidence": 0.937,
+      "anomaly_risk": 58.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Block evader",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Linked to a recently blocked declared crawler identity (treated as decisive)"
+      ],
+      "linked_to_blocked_client": true,
+      "suspected_operator_cluster": [
+        "18.97.0.137",
+        "ByteHarvest/2.0 (+https://byteharvestdata.example/faq)"
+      ],
+      "analyst_note": null
+    },
+    {
+      "client_key": "148.189.100.7||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "148.189.100.7",
+      "asn": "AS64850",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 49,
+      "total_bytes": 4384406,
+      "request_rate_per_min": 0.11,
+      "timing_cv": 4.44,
+      "asset_ratio": 0.673,
+      "sequential_score": 0.067,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.972,
+      "anomaly_risk": 7.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 97.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "153.160.54.91||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+      "ip": "153.160.54.91",
+      "asn": "AS64611",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 100,
+      "total_bytes": 8052805,
+      "request_rate_per_min": 0.29,
+      "timing_cv": 5.3,
+      "asset_ratio": 0.59,
+      "sequential_score": 0.154,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.82,
+      "anomaly_risk": 13.7,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 82.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "156.96.79.98||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "156.96.79.98",
+      "asn": "AS64823",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Block evader",
+      "subtype": "block_evader",
+      "operator_id": "operator_02",
+      "n_requests": 16,
+      "total_bytes": 518530,
+      "request_rate_per_min": 8.65,
+      "timing_cv": 0.86,
+      "asset_ratio": 0.188,
+      "sequential_score": 1.0,
+      "disallowed_hits": 7,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Block evader",
+      "rules_reasons": [
+        "Appeared 5 minutes after a declared crawler was blocked, requesting 100% of the same pages from a new IP/ASN under a generic browser identity -- consistent with block evasion"
+      ],
+      "ml_pred": "Block evader",
+      "ml_confidence": 0.895,
+      "anomaly_risk": 95.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Block evader",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Linked to a recently blocked declared crawler identity (treated as decisive)"
+      ],
+      "linked_to_blocked_client": true,
+      "suspected_operator_cluster": [
+        "18.97.0.62",
+        "ByteHarvest/2.0 (+https://byteharvestdata.example/faq)"
+      ],
+      "analyst_note": "This client claims to be nan from 156.96.79.98 (ASN AS64823), sending 16 requests at ~8.6 req/min. It appeared shortly after a declared crawler identity was blocked on this site, requesting a similar set of pages from a new network -- a pattern consistent with block evasion, and it warrants review alongside the originating blocked client. The machine-learning model independently predicted \"Block evader\" (89% confidence). It also scored as a behavioral outlier relative to the rest of the traffic (anomaly risk 95/100), even considering its overall profile. Overall hybrid risk score: 100/100 (\"Block evader\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "157.225.170.150||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "157.225.170.150",
+      "asn": "AS65224",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Block evader",
+      "subtype": "block_evader",
+      "operator_id": "operator_04",
+      "n_requests": 28,
+      "total_bytes": 1483656,
+      "request_rate_per_min": 18.06,
+      "timing_cv": 0.85,
+      "asset_ratio": 0.107,
+      "sequential_score": 0.3,
+      "disallowed_hits": 4,
+      "robots_txt_fetched": false,
+      "rules_score": 90.0,
+      "rules_label": "Block evader",
+      "rules_reasons": [
+        "Appeared 7 minutes after a declared crawler was blocked, requesting 50% of the same pages from a new IP/ASN under a generic browser identity -- consistent with block evasion"
+      ],
+      "ml_pred": "Block evader",
+      "ml_confidence": 0.954,
+      "anomaly_risk": 56.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Block evader",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Linked to a recently blocked declared crawler identity (treated as decisive)"
+      ],
+      "linked_to_blocked_client": true,
+      "suspected_operator_cluster": [
+        "66.249.72.226",
+        "Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)"
+      ],
+      "analyst_note": null
+    },
+    {
+      "client_key": "157.55.39.123||Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm)",
+      "ip": "157.55.39.123",
+      "asn": "AS64511",
+      "user_agent": "Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm)",
+      "claimed_identity": "FinderCrawl",
+      "true_category": "Search engine",
+      "subtype": "search_engine",
+      "operator_id": null,
+      "n_requests": 67,
+      "total_bytes": 2616490,
+      "request_rate_per_min": 15.7,
+      "timing_cv": 0.34,
+      "asset_ratio": 0.091,
+      "sequential_score": 0.741,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": true,
+      "rules_score": 0.0,
+      "rules_label": "Search engine",
+      "rules_reasons": [
+        "IP, ASN and TLS fingerprint are all consistent with FinderCrawl's published infrastructure"
+      ],
+      "ml_pred": "Search engine",
+      "ml_confidence": 0.706,
+      "anomaly_risk": 55.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Search engine",
+      "hybrid_score": 71.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "157.55.39.125||Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm)",
+      "ip": "157.55.39.125",
+      "asn": "AS64511",
+      "user_agent": "Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm)",
+      "claimed_identity": "FinderCrawl",
+      "true_category": "Search engine",
+      "subtype": "search_engine",
+      "operator_id": null,
+      "n_requests": 63,
+      "total_bytes": 2343211,
+      "request_rate_per_min": 12.99,
+      "timing_cv": 0.23,
+      "asset_ratio": 0.048,
+      "sequential_score": 0.643,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": true,
+      "rules_score": 0.0,
+      "rules_label": "Search engine",
+      "rules_reasons": [
+        "IP, ASN and TLS fingerprint are all consistent with FinderCrawl's published infrastructure"
+      ],
+      "ml_pred": "Search engine",
+      "ml_confidence": 0.643,
+      "anomaly_risk": 45.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Search engine",
+      "hybrid_score": 64.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "157.55.39.186||Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm)",
+      "ip": "157.55.39.186",
+      "asn": "AS64511",
+      "user_agent": "Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm)",
+      "claimed_identity": "FinderCrawl",
+      "true_category": "Search engine",
+      "subtype": "search_engine",
+      "operator_id": null,
+      "n_requests": 111,
+      "total_bytes": 4697857,
+      "request_rate_per_min": 8.94,
+      "timing_cv": 0.25,
+      "asset_ratio": 0.109,
+      "sequential_score": 0.484,
+      "disallowed_hits": 2,
+      "robots_txt_fetched": true,
+      "rules_score": 6.0,
+      "rules_label": "Search engine",
+      "rules_reasons": [
+        "Requested 2 robots.txt-disallowed path(s) despite claiming to be FinderCrawl",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Search engine",
+      "ml_confidence": 0.702,
+      "anomaly_risk": 46.2,
+      "anomaly_flag": false,
+      "hybrid_label": "Search engine",
+      "hybrid_score": 70.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "161.98.105.240||Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "ip": "161.98.105.240",
+      "asn": "AS65008",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 34,
+      "total_bytes": 2879702,
+      "request_rate_per_min": 6.02,
+      "timing_cv": 1.06,
+      "asset_ratio": 0.588,
+      "sequential_score": 0.308,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.862,
+      "anomaly_risk": 18.8,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 86.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "164.84.56.129||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "164.84.56.129",
+      "asn": "AS64669",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 45,
+      "total_bytes": 2705017,
+      "request_rate_per_min": 8.94,
+      "timing_cv": 1.49,
+      "asset_ratio": 0.644,
+      "sequential_score": 0.133,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.911,
+      "anomaly_risk": 2.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 91.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "168.124.115.119||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "168.124.115.119",
+      "asn": "AS64674",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper",
+      "operator_id": null,
+      "n_requests": 105,
+      "total_bytes": 2982430,
+      "request_rate_per_min": 26.03,
+      "timing_cv": 0.23,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.959,
+      "disallowed_hits": 27,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Undeclared bot",
+      "rules_reasons": [
+        "Claims to be chrome but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser",
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Never loaded any CSS/JS/image sub-resources despite claiming to be a browser",
+        "missing Accept-Language despite claiming a browser",
+        "missing Sec-CH-UA despite claiming chrome",
+        "claims chrome but 94% of requests fingerprint as a scripting library, not a browser",
+        "Requested 27 robots.txt-disallowed path(s)"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.772,
+      "anomaly_risk": 82.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 168.124.115.119 (ASN AS64674), sending 105 requests at ~26.0 req/min. The rule-based check flagged: Claims to be chrome but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser; Request timing is unusually regular (low variance) -- typical of a script, not a person. The machine-learning model independently predicted \"Undeclared bot\" (77% confidence). It also scored as a behavioral outlier relative to the rest of the traffic (anomaly risk 82/100), even considering its overall profile. Overall hybrid risk score: 100/100 (\"Undeclared bot\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "178.242.247.184||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "178.242.247.184",
+      "asn": "AS65153",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 29,
+      "total_bytes": 2248665,
+      "request_rate_per_min": 12.43,
+      "timing_cv": 0.73,
+      "asset_ratio": 0.552,
+      "sequential_score": 0.0,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.831,
+      "anomaly_risk": 30.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 83.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "179.202.212.21||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "179.202.212.21",
+      "asn": "AS65111",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 20,
+      "total_bytes": 1974973,
+      "request_rate_per_min": 7.79,
+      "timing_cv": 1.34,
+      "asset_ratio": 0.6,
+      "sequential_score": 0.167,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.83,
+      "anomaly_risk": 33.8,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 83.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "18.103.26.209||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "18.103.26.209",
+      "asn": "AS64881",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 14,
+      "total_bytes": 1317271,
+      "request_rate_per_min": 23.33,
+      "timing_cv": 0.61,
+      "asset_ratio": 0.786,
+      "sequential_score": 0.5,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.636,
+      "anomaly_risk": 73.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Human",
+      "hybrid_score": 64.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 74/100) despite otherwise looking like Human -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "18.97.0.137||ByteHarvest/2.0 (+https://byteharvestdata.example/faq)",
+      "ip": "18.97.0.137",
+      "asn": "AS64504",
+      "user_agent": "ByteHarvest/2.0 (+https://byteharvestdata.example/faq)",
+      "claimed_identity": "ByteHarvest",
+      "true_category": "Verified AI crawler",
+      "subtype": "pre_evasion",
+      "operator_id": "operator_03",
+      "n_requests": 5,
+      "total_bytes": 106991,
+      "request_rate_per_min": 5.88,
+      "timing_cv": 0.19,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.0,
+      "disallowed_hits": 1,
+      "robots_txt_fetched": true,
+      "rules_score": 0.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "ByteHarvest is fully disallowed by robots.txt/WAF and was blocked (403) on most requests; no disguised follow-up traffic was linked to it"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.851,
+      "anomaly_risk": 86.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 85.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 86/100) despite otherwise looking like Verified AI crawler -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "18.97.0.62||ByteHarvest/2.0 (+https://byteharvestdata.example/faq)",
+      "ip": "18.97.0.62",
+      "asn": "AS64504",
+      "user_agent": "ByteHarvest/2.0 (+https://byteharvestdata.example/faq)",
+      "claimed_identity": "ByteHarvest",
+      "true_category": "Verified AI crawler",
+      "subtype": "pre_evasion",
+      "operator_id": "operator_02",
+      "n_requests": 3,
+      "total_bytes": 39921,
+      "request_rate_per_min": 3.21,
+      "timing_cv": 0.04,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.0,
+      "disallowed_hits": 1,
+      "robots_txt_fetched": true,
+      "rules_score": 0.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "ByteHarvest is fully disallowed by robots.txt/WAF and was blocked (403) on most requests; no disguised follow-up traffic was linked to it"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.851,
+      "anomaly_risk": 98.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 85.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 99/100) despite otherwise looking like Verified AI crawler -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "180.229.110.12||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "180.229.110.12",
+      "asn": "AS65086",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 138,
+      "total_bytes": 11531500,
+      "request_rate_per_min": 0.18,
+      "timing_cv": 5.77,
+      "asset_ratio": 0.638,
+      "sequential_score": 0.125,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.801,
+      "anomaly_risk": 47.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 80.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "182.185.126.73||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "ip": "182.185.126.73",
+      "asn": "AS65018",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper",
+      "operator_id": null,
+      "n_requests": 198,
+      "total_bytes": 5066311,
+      "request_rate_per_min": 30.15,
+      "timing_cv": 0.31,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.868,
+      "disallowed_hits": 77,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Undeclared bot",
+      "rules_reasons": [
+        "Claims to be edge but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser",
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Never loaded any CSS/JS/image sub-resources despite claiming to be a browser",
+        "missing Accept-Language despite claiming a browser",
+        "missing Sec-CH-UA despite claiming edge",
+        "claims edge but 91% of requests fingerprint as a scripting library, not a browser",
+        "Requested 77 robots.txt-disallowed path(s)"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.963,
+      "anomaly_risk": 91.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 182.185.126.73 (ASN AS65018), sending 198 requests at ~30.2 req/min. The rule-based check flagged: Claims to be edge but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser; Request timing is unusually regular (low variance) -- typical of a script, not a person. The machine-learning model independently predicted \"Undeclared bot\" (96% confidence). It also scored as a behavioral outlier relative to the rest of the traffic (anomaly risk 91/100), even considering its overall profile. Overall hybrid risk score: 100/100 (\"Undeclared bot\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "182.188.37.250||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "ip": "182.188.37.250",
+      "asn": "AS64705",
+      "user_agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "claimed_identity": "AlphaBot",
+      "true_category": "Spoofed crawler",
+      "subtype": "spoofed",
+      "operator_id": null,
+      "n_requests": 103,
+      "total_bytes": 2766371,
+      "request_rate_per_min": 8.88,
+      "timing_cv": 0.2,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.541,
+      "disallowed_hits": 28,
+      "robots_txt_fetched": false,
+      "rules_score": 96.0,
+      "rules_label": "Spoofed crawler",
+      "rules_reasons": [
+        "Claims to be AlphaBot but its IP address falls outside AlphaBot's declared ranges",
+        "Claims to be AlphaBot but its network (ASN) doesn't match AlphaBot's declared infrastructure",
+        "Claims to be AlphaBot but its TLS (JA4) fingerprint doesn't match AlphaBot's expected client",
+        "Requested 28 robots.txt-disallowed path(s) despite claiming to be AlphaBot"
+      ],
+      "ml_pred": "Spoofed crawler",
+      "ml_confidence": 0.82,
+      "anomaly_risk": 85.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Spoofed crawler",
+      "hybrid_score": 96.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "182.56.208.161||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "182.56.208.161",
+      "asn": "AS64988",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper",
+      "operator_id": null,
+      "n_requests": 122,
+      "total_bytes": 3216846,
+      "request_rate_per_min": 39.14,
+      "timing_cv": 0.34,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.914,
+      "disallowed_hits": 48,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Undeclared bot",
+      "rules_reasons": [
+        "Claims to be chrome but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser",
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Never loaded any CSS/JS/image sub-resources despite claiming to be a browser",
+        "missing Accept-Language despite claiming a browser",
+        "missing Sec-CH-UA despite claiming chrome",
+        "claims chrome but 96% of requests fingerprint as a scripting library, not a browser",
+        "Requested 48 robots.txt-disallowed path(s)"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.99,
+      "anomaly_risk": 72.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 182.56.208.161 (ASN AS64988), sending 122 requests at ~39.1 req/min. The rule-based check flagged: Claims to be chrome but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser; Request timing is unusually regular (low variance) -- typical of a script, not a person. The machine-learning model independently predicted \"Undeclared bot\" (99% confidence). It also scored as a behavioral outlier relative to the rest of the traffic (anomaly risk 72/100), even considering its overall profile. Overall hybrid risk score: 100/100 (\"Undeclared bot\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "184.60.86.64||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "184.60.86.64",
+      "asn": "AS64917",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper",
+      "operator_id": null,
+      "n_requests": 149,
+      "total_bytes": 3602108,
+      "request_rate_per_min": 58.43,
+      "timing_cv": 0.31,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.879,
+      "disallowed_hits": 54,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Undeclared bot",
+      "rules_reasons": [
+        "Claims to be chrome but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser",
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Never loaded any CSS/JS/image sub-resources despite claiming to be a browser",
+        "missing Accept-Language despite claiming a browser",
+        "missing Sec-CH-UA despite claiming chrome",
+        "claims chrome but 89% of requests fingerprint as a scripting library, not a browser",
+        "Requested 54 robots.txt-disallowed path(s)"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.946,
+      "anomaly_risk": 90.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 184.60.86.64 (ASN AS64917), sending 149 requests at ~58.4 req/min. The rule-based check flagged: Claims to be chrome but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser; Request timing is unusually regular (low variance) -- typical of a script, not a person. The machine-learning model independently predicted \"Undeclared bot\" (95% confidence). It also scored as a behavioral outlier relative to the rest of the traffic (anomaly risk 90/100), even considering its overall profile. Overall hybrid risk score: 100/100 (\"Undeclared bot\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "192.94.209.240||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "192.94.209.240",
+      "asn": "AS64671",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 88,
+      "total_bytes": 6562760,
+      "request_rate_per_min": 0.5,
+      "timing_cv": 5.73,
+      "asset_ratio": 0.67,
+      "sequential_score": 0.185,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.915,
+      "anomaly_risk": 5.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 91.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "193.18.45.248||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "193.18.45.248",
+      "asn": "AS64756",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Block evader",
+      "subtype": "block_evader",
+      "operator_id": "operator_03",
+      "n_requests": 26,
+      "total_bytes": 773594,
+      "request_rate_per_min": 7.46,
+      "timing_cv": 1.02,
+      "asset_ratio": 0.038,
+      "sequential_score": 0.263,
+      "disallowed_hits": 5,
+      "robots_txt_fetched": false,
+      "rules_score": 90.0,
+      "rules_label": "Block evader",
+      "rules_reasons": [
+        "Appeared 17 minutes after a declared crawler was blocked, requesting 40% of the same pages from a new IP/ASN under a generic browser identity -- consistent with block evasion"
+      ],
+      "ml_pred": "Block evader",
+      "ml_confidence": 0.911,
+      "anomaly_risk": 60.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Block evader",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Linked to a recently blocked declared crawler identity (treated as decisive)"
+      ],
+      "linked_to_blocked_client": true,
+      "suspected_operator_cluster": [
+        "18.97.0.137",
+        "ByteHarvest/2.0 (+https://byteharvestdata.example/faq)"
+      ],
+      "analyst_note": null
+    },
+    {
+      "client_key": "194.131.210.230||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "194.131.210.230",
+      "asn": "AS64919",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 76,
+      "total_bytes": 7033934,
+      "request_rate_per_min": 0.2,
+      "timing_cv": 5.72,
+      "asset_ratio": 0.605,
+      "sequential_score": 0.107,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.95,
+      "anomaly_risk": 10.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 95.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "197.45.162.43||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "197.45.162.43",
+      "asn": "AS65184",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 37,
+      "total_bytes": 2089954,
+      "request_rate_per_min": 0.18,
+      "timing_cv": 3.93,
+      "asset_ratio": 0.622,
+      "sequential_score": 0.231,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.895,
+      "anomaly_risk": 25.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "198.207.179.208||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "198.207.179.208",
+      "asn": "AS65070",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 10,
+      "total_bytes": 809513,
+      "request_rate_per_min": 20.69,
+      "timing_cv": 1.12,
+      "asset_ratio": 0.7,
+      "sequential_score": 0.0,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 6.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Elevated 4xx/429 error rate, consistent with blind URL guessing",
+        "Signals present but not strong enough to outweigh human-like browsing overall"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.702,
+      "anomaly_risk": 62.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Human",
+      "hybrid_score": 70.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "20.15.240.68||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "ip": "20.15.240.68",
+      "asn": "AS64501",
+      "user_agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "claimed_identity": "AlphaBot",
+      "true_category": "Verified AI crawler",
+      "subtype": "verified",
+      "operator_id": null,
+      "n_requests": 124,
+      "total_bytes": 3667264,
+      "request_rate_per_min": 8.41,
+      "timing_cv": 0.24,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.826,
+      "disallowed_hits": 2,
+      "robots_txt_fetched": true,
+      "rules_score": 6.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "Requested 2 robots.txt-disallowed path(s) despite claiming to be AlphaBot",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.795,
+      "anomaly_risk": 38.7,
+      "anomaly_flag": false,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 80.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "20.15.241.157||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "ip": "20.15.241.157",
+      "asn": "AS64501",
+      "user_agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "claimed_identity": "AlphaBot",
+      "true_category": "Verified AI crawler",
+      "subtype": "verified",
+      "operator_id": null,
+      "n_requests": 137,
+      "total_bytes": 4064020,
+      "request_rate_per_min": 7.12,
+      "timing_cv": 0.23,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.885,
+      "disallowed_hits": 1,
+      "robots_txt_fetched": true,
+      "rules_score": 3.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "Requested 1 robots.txt-disallowed path(s) despite claiming to be AlphaBot",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.769,
+      "anomaly_risk": 43.8,
+      "anomaly_flag": false,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 77.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "20.15.241.73||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "ip": "20.15.241.73",
+      "asn": "AS64501",
+      "user_agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "claimed_identity": "AlphaBot",
+      "true_category": "Verified AI crawler",
+      "subtype": "verified",
+      "operator_id": null,
+      "n_requests": 107,
+      "total_bytes": 3077599,
+      "request_rate_per_min": 14.11,
+      "timing_cv": 0.25,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.778,
+      "disallowed_hits": 3,
+      "robots_txt_fetched": true,
+      "rules_score": 9.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "Requested 3 robots.txt-disallowed path(s) despite claiming to be AlphaBot",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.52,
+      "anomaly_risk": 35.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 52.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "20.34.232.243||Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "ip": "20.34.232.243",
+      "asn": "AS64630",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 27,
+      "total_bytes": 2165274,
+      "request_rate_per_min": 5.62,
+      "timing_cv": 1.33,
+      "asset_ratio": 0.444,
+      "sequential_score": 0.071,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.879,
+      "anomaly_risk": 28.7,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 88.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "200.44.187.13||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "ip": "200.44.187.13",
+      "asn": "AS64854",
+      "user_agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "claimed_identity": "AlphaBot",
+      "true_category": "Spoofed crawler",
+      "subtype": "spoofed",
+      "operator_id": null,
+      "n_requests": 106,
+      "total_bytes": 2902651,
+      "request_rate_per_min": 10.64,
+      "timing_cv": 0.19,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.36,
+      "disallowed_hits": 25,
+      "robots_txt_fetched": true,
+      "rules_score": 72.0,
+      "rules_label": "Spoofed crawler",
+      "rules_reasons": [
+        "Claims to be AlphaBot but its IP address falls outside AlphaBot's declared ranges",
+        "Claims to be AlphaBot but its network (ASN) doesn't match AlphaBot's declared infrastructure",
+        "Requested 25 robots.txt-disallowed path(s) despite claiming to be AlphaBot"
+      ],
+      "ml_pred": "Spoofed crawler",
+      "ml_confidence": 0.783,
+      "anomaly_risk": 77.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Spoofed crawler",
+      "hybrid_score": 78.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "207.116.89.238||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "207.116.89.238",
+      "asn": "AS64944",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 86,
+      "total_bytes": 7824771,
+      "request_rate_per_min": 0.46,
+      "timing_cv": 5.74,
+      "asset_ratio": 0.686,
+      "sequential_score": 0.12,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.935,
+      "anomaly_risk": 20.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 93.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "208.176.50.204||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "ip": "208.176.50.204",
+      "asn": "AS64657",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 63,
+      "total_bytes": 3901213,
+      "request_rate_per_min": 0.22,
+      "timing_cv": 5.23,
+      "asset_ratio": 0.587,
+      "sequential_score": 0.16,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.976,
+      "anomaly_risk": 6.2,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 98.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "21.203.57.66||Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "ip": "21.203.57.66",
+      "asn": "AS64711",
+      "user_agent": "Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "claimed_identity": "QueryWeaver",
+      "true_category": "Spoofed crawler",
+      "subtype": "spoofed",
+      "operator_id": null,
+      "n_requests": 60,
+      "total_bytes": 1659339,
+      "request_rate_per_min": 10.47,
+      "timing_cv": 0.28,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.419,
+      "disallowed_hits": 14,
+      "robots_txt_fetched": true,
+      "rules_score": 96.0,
+      "rules_label": "Spoofed crawler",
+      "rules_reasons": [
+        "Claims to be QueryWeaver but its IP address falls outside QueryWeaver's declared ranges",
+        "Claims to be QueryWeaver but its network (ASN) doesn't match QueryWeaver's declared infrastructure",
+        "Claims to be QueryWeaver but its TLS (JA4) fingerprint doesn't match QueryWeaver's expected client",
+        "Requested 14 robots.txt-disallowed path(s) despite claiming to be QueryWeaver"
+      ],
+      "ml_pred": "Spoofed crawler",
+      "ml_confidence": 0.649,
+      "anomaly_risk": 92.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Spoofed crawler",
+      "hybrid_score": 96.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "215.50.62.53||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "ip": "215.50.62.53",
+      "asn": "AS64773",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper",
+      "operator_id": null,
+      "n_requests": 172,
+      "total_bytes": 4302140,
+      "request_rate_per_min": 36.34,
+      "timing_cv": 0.34,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.835,
+      "disallowed_hits": 67,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Undeclared bot",
+      "rules_reasons": [
+        "Claims to be edge but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser",
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Never loaded any CSS/JS/image sub-resources despite claiming to be a browser",
+        "missing Accept-Language despite claiming a browser",
+        "missing Sec-CH-UA despite claiming edge",
+        "claims edge but 94% of requests fingerprint as a scripting library, not a browser",
+        "Requested 67 robots.txt-disallowed path(s)"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.985,
+      "anomaly_risk": 71.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 215.50.62.53 (ASN AS64773), sending 172 requests at ~36.3 req/min. The rule-based check flagged: Claims to be edge but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser; Request timing is unusually regular (low variance) -- typical of a script, not a person. The machine-learning model independently predicted \"Undeclared bot\" (98% confidence). It also scored as a behavioral outlier relative to the rest of the traffic (anomaly risk 71/100), even considering its overall profile. Overall hybrid risk score: 100/100 (\"Undeclared bot\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "216.197.101.105||Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "ip": "216.197.101.105",
+      "asn": "AS64781",
+      "user_agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",
+      "claimed_identity": "AlphaBot",
+      "true_category": "Spoofed crawler",
+      "subtype": "spoofed",
+      "operator_id": null,
+      "n_requests": 94,
+      "total_bytes": 2646170,
+      "request_rate_per_min": 21.36,
+      "timing_cv": 0.21,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.426,
+      "disallowed_hits": 31,
+      "robots_txt_fetched": false,
+      "rules_score": 72.0,
+      "rules_label": "Spoofed crawler",
+      "rules_reasons": [
+        "Claims to be AlphaBot but its IP address falls outside AlphaBot's declared ranges",
+        "Claims to be AlphaBot but its network (ASN) doesn't match AlphaBot's declared infrastructure",
+        "Requested 31 robots.txt-disallowed path(s) despite claiming to be AlphaBot"
+      ],
+      "ml_pred": "Spoofed crawler",
+      "ml_confidence": 0.895,
+      "anomaly_risk": 68.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Spoofed crawler",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "26.162.98.43||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "ip": "26.162.98.43",
+      "asn": "AS64651",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 40,
+      "total_bytes": 4737686,
+      "request_rate_per_min": 11.76,
+      "timing_cv": 0.76,
+      "asset_ratio": 0.6,
+      "sequential_score": 0.133,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.918,
+      "anomaly_risk": 16.2,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 92.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "26.212.47.26||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "26.212.47.26",
+      "asn": "AS64846",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 90,
+      "total_bytes": 7065765,
+      "request_rate_per_min": 0.2,
+      "timing_cv": 4.48,
+      "asset_ratio": 0.644,
+      "sequential_score": 0.138,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.915,
+      "anomaly_risk": 8.8,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 91.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "27.2.186.208||Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "ip": "27.2.186.208",
+      "asn": "AS64768",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 46,
+      "total_bytes": 3876594,
+      "request_rate_per_min": 0.19,
+      "timing_cv": 4.72,
+      "asset_ratio": 0.522,
+      "sequential_score": 0.286,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.828,
+      "anomaly_risk": 31.2,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 83.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "28.100.0.92||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "28.100.0.92",
+      "asn": "AS64946",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 72,
+      "total_bytes": 5981875,
+      "request_rate_per_min": 0.19,
+      "timing_cv": 4.54,
+      "asset_ratio": 0.583,
+      "sequential_score": 0.241,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.956,
+      "anomaly_risk": 23.8,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 96.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "29.65.37.198||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "29.65.37.198",
+      "asn": "AS64632",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 48,
+      "total_bytes": 4520134,
+      "request_rate_per_min": 0.17,
+      "timing_cv": 3.58,
+      "asset_ratio": 0.583,
+      "sequential_score": 0.167,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.959,
+      "anomaly_risk": 1.2,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 96.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "32.247.206.141||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "32.247.206.141",
+      "asn": "AS65081",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Block evader",
+      "subtype": "block_evader",
+      "operator_id": "operator_01",
+      "n_requests": 14,
+      "total_bytes": 592861,
+      "request_rate_per_min": 10.91,
+      "timing_cv": 0.63,
+      "asset_ratio": 0.214,
+      "sequential_score": 0.125,
+      "disallowed_hits": 2,
+      "robots_txt_fetched": false,
+      "rules_score": 90.0,
+      "rules_label": "Block evader",
+      "rules_reasons": [
+        "Appeared 7 minutes after a declared crawler was blocked, requesting 67% of the same pages from a new IP/ASN under a generic browser identity -- consistent with block evasion"
+      ],
+      "ml_pred": "Block evader",
+      "ml_confidence": 0.931,
+      "anomaly_risk": 57.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Block evader",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Linked to a recently blocked declared crawler identity (treated as decisive)"
+      ],
+      "linked_to_blocked_client": true,
+      "suspected_operator_cluster": [
+        "66.249.72.47",
+        "Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)"
+      ],
+      "analyst_note": null
+    },
+    {
+      "client_key": "34.102.136.1||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "ip": "34.102.136.1",
+      "asn": "AS64502",
+      "user_agent": "Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "claimed_identity": "NovaCrawler",
+      "true_category": "Verified AI crawler",
+      "subtype": "verified",
+      "operator_id": null,
+      "n_requests": 79,
+      "total_bytes": 2354741,
+      "request_rate_per_min": 8.84,
+      "timing_cv": 0.27,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.893,
+      "disallowed_hits": 2,
+      "robots_txt_fetched": true,
+      "rules_score": 6.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "Requested 2 robots.txt-disallowed path(s) despite claiming to be NovaCrawler",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.653,
+      "anomaly_risk": 66.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 65.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 66/100) despite otherwise looking like Verified AI crawler -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "34.102.137.65||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "ip": "34.102.137.65",
+      "asn": "AS64502",
+      "user_agent": "Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "claimed_identity": "NovaCrawler",
+      "true_category": "Verified AI crawler",
+      "subtype": "verified",
+      "operator_id": null,
+      "n_requests": 101,
+      "total_bytes": 3208266,
+      "request_rate_per_min": 8.77,
+      "timing_cv": 0.21,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.779,
+      "disallowed_hits": 2,
+      "robots_txt_fetched": true,
+      "rules_score": 6.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "Requested 2 robots.txt-disallowed path(s) despite claiming to be NovaCrawler",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.76,
+      "anomaly_risk": 51.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 76.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "44.221.0.190||Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "ip": "44.221.0.190",
+      "asn": "AS64503",
+      "user_agent": "Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "claimed_identity": "QueryWeaver",
+      "true_category": "Verified AI crawler",
+      "subtype": "verified",
+      "operator_id": null,
+      "n_requests": 127,
+      "total_bytes": 3812728,
+      "request_rate_per_min": 9.54,
+      "timing_cv": 0.23,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.882,
+      "disallowed_hits": 3,
+      "robots_txt_fetched": true,
+      "rules_score": 9.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "Requested 3 robots.txt-disallowed path(s) despite claiming to be QueryWeaver",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.754,
+      "anomaly_risk": 37.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 75.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "44.221.0.242||Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "ip": "44.221.0.242",
+      "asn": "AS64503",
+      "user_agent": "Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "claimed_identity": "QueryWeaver",
+      "true_category": "Verified AI crawler",
+      "subtype": "verified",
+      "operator_id": null,
+      "n_requests": 134,
+      "total_bytes": 3816109,
+      "request_rate_per_min": 7.5,
+      "timing_cv": 0.22,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.836,
+      "disallowed_hits": 2,
+      "robots_txt_fetched": true,
+      "rules_score": 6.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "Requested 2 robots.txt-disallowed path(s) despite claiming to be QueryWeaver",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.775,
+      "anomaly_risk": 40.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 77.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "45.129.61.37||Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "ip": "45.129.61.37",
+      "asn": "AS65287",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 51,
+      "total_bytes": 4761296,
+      "request_rate_per_min": 0.27,
+      "timing_cv": 4.93,
+      "asset_ratio": 0.588,
+      "sequential_score": 0.211,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.986,
+      "anomaly_risk": 0.0,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 99.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 45.129.61.37 (ASN AS65287), sending 51 requests at ~0.3 req/min. The rule-based check flagged: Irregular timing, normal asset loading, and non-sequential browsing look human. The machine-learning model independently predicted \"Human\" (99% confidence). Its behavioral-outlier score was moderate (0/100). Overall hybrid risk score: 99/100 (\"Human\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "46.34.130.225||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "46.34.130.225",
+      "asn": "AS65075",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "tricky:stealthy_scraper",
+      "operator_id": null,
+      "n_requests": 88,
+      "total_bytes": 5304784,
+      "request_rate_per_min": 0.22,
+      "timing_cv": 7.56,
+      "asset_ratio": 0.205,
+      "sequential_score": 0.477,
+      "disallowed_hits": 1,
+      "robots_txt_fetched": false,
+      "rules_score": 8.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Requested 1 robots.txt-disallowed path(s)",
+        "Elevated 4xx/429 error rate, consistent with blind URL guessing",
+        "Signals present but not strong enough to outweigh human-like browsing overall"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.64,
+      "anomaly_risk": 67.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Human",
+      "hybrid_score": 64.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 68/100) despite otherwise looking like Human -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "51.32.155.223||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "51.32.155.223",
+      "asn": "AS65242",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 109,
+      "total_bytes": 10008346,
+      "request_rate_per_min": 0.26,
+      "timing_cv": 4.59,
+      "asset_ratio": 0.651,
+      "sequential_score": 0.111,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.885,
+      "anomaly_risk": 42.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 88.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "60.169.0.173||Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "ip": "60.169.0.173",
+      "asn": "AS64860",
+      "user_agent": "Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot)",
+      "claimed_identity": "QueryWeaver",
+      "true_category": "Spoofed crawler",
+      "subtype": "spoofed",
+      "operator_id": null,
+      "n_requests": 57,
+      "total_bytes": 1579269,
+      "request_rate_per_min": 29.48,
+      "timing_cv": 0.26,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.471,
+      "disallowed_hits": 21,
+      "robots_txt_fetched": false,
+      "rules_score": 96.0,
+      "rules_label": "Spoofed crawler",
+      "rules_reasons": [
+        "Claims to be QueryWeaver but its IP address falls outside QueryWeaver's declared ranges",
+        "Claims to be QueryWeaver but its network (ASN) doesn't match QueryWeaver's declared infrastructure",
+        "Claims to be QueryWeaver but its TLS (JA4) fingerprint doesn't match QueryWeaver's expected client",
+        "Requested 21 robots.txt-disallowed path(s) despite claiming to be QueryWeaver"
+      ],
+      "ml_pred": "Spoofed crawler",
+      "ml_confidence": 0.726,
+      "anomaly_risk": 83.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Spoofed crawler",
+      "hybrid_score": 96.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "61.112.244.55||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "ip": "61.112.244.55",
+      "asn": "AS65008",
+      "user_agent": "Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "claimed_identity": "NovaCrawler",
+      "true_category": "Spoofed crawler",
+      "subtype": "spoofed",
+      "operator_id": null,
+      "n_requests": 88,
+      "total_bytes": 2503293,
+      "request_rate_per_min": 9.41,
+      "timing_cv": 0.25,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.288,
+      "disallowed_hits": 25,
+      "robots_txt_fetched": false,
+      "rules_score": 96.0,
+      "rules_label": "Spoofed crawler",
+      "rules_reasons": [
+        "Claims to be NovaCrawler but its IP address falls outside NovaCrawler's declared ranges",
+        "Claims to be NovaCrawler but its network (ASN) doesn't match NovaCrawler's declared infrastructure",
+        "Claims to be NovaCrawler but its TLS (JA4) fingerprint doesn't match NovaCrawler's expected client",
+        "Requested 25 robots.txt-disallowed path(s) despite claiming to be NovaCrawler"
+      ],
+      "ml_pred": "Spoofed crawler",
+      "ml_confidence": 0.951,
+      "anomaly_risk": 75.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Spoofed crawler",
+      "hybrid_score": 96.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "65.206.136.65||Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "ip": "65.206.136.65",
+      "asn": "AS65040",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper",
+      "operator_id": null,
+      "n_requests": 194,
+      "total_bytes": 5321161,
+      "request_rate_per_min": 39.06,
+      "timing_cv": 0.32,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.85,
+      "disallowed_hits": 58,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Undeclared bot",
+      "rules_reasons": [
+        "Claims to be firefox but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser",
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Never loaded any CSS/JS/image sub-resources despite claiming to be a browser",
+        "missing Accept-Language despite claiming a browser",
+        "claims firefox but 96% of requests fingerprint as a scripting library, not a browser",
+        "Requested 58 robots.txt-disallowed path(s)"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.953,
+      "anomaly_risk": 88.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 65.206.136.65 (ASN AS65040), sending 194 requests at ~39.1 req/min. The rule-based check flagged: Claims to be firefox but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser; Request timing is unusually regular (low variance) -- typical of a script, not a person. The machine-learning model independently predicted \"Undeclared bot\" (95% confidence). It also scored as a behavioral outlier relative to the rest of the traffic (anomaly risk 89/100), even considering its overall profile. Overall hybrid risk score: 100/100 (\"Undeclared bot\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "66.249.66.17||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "ip": "66.249.66.17",
+      "asn": "AS64510",
+      "user_agent": "Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "claimed_identity": "SeekerBot",
+      "true_category": "Search engine",
+      "subtype": "search_engine",
+      "operator_id": null,
+      "n_requests": 112,
+      "total_bytes": 4184204,
+      "request_rate_per_min": 14.67,
+      "timing_cv": 0.25,
+      "asset_ratio": 0.09,
+      "sequential_score": 0.546,
+      "disallowed_hits": 2,
+      "robots_txt_fetched": true,
+      "rules_score": 6.0,
+      "rules_label": "Search engine",
+      "rules_reasons": [
+        "Requested 2 robots.txt-disallowed path(s) despite claiming to be SeekerBot",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Search engine",
+      "ml_confidence": 0.912,
+      "anomaly_risk": 41.2,
+      "anomaly_flag": false,
+      "hybrid_label": "Search engine",
+      "hybrid_score": 91.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "66.249.66.214||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "ip": "66.249.66.214",
+      "asn": "AS64510",
+      "user_agent": "Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "claimed_identity": "SeekerBot",
+      "true_category": "Search engine",
+      "subtype": "search_engine",
+      "operator_id": null,
+      "n_requests": 115,
+      "total_bytes": 3778709,
+      "request_rate_per_min": 8.59,
+      "timing_cv": 0.24,
+      "asset_ratio": 0.061,
+      "sequential_score": 0.706,
+      "disallowed_hits": 2,
+      "robots_txt_fetched": true,
+      "rules_score": 6.0,
+      "rules_label": "Search engine",
+      "rules_reasons": [
+        "Requested 2 robots.txt-disallowed path(s) despite claiming to be SeekerBot",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Search engine",
+      "ml_confidence": 0.541,
+      "anomaly_risk": 36.3,
+      "anomaly_flag": false,
+      "hybrid_label": "Search engine",
+      "hybrid_score": 54.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "66.249.68.161||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "ip": "66.249.68.161",
+      "asn": "AS64510",
+      "user_agent": "Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "claimed_identity": "SeekerBot",
+      "true_category": "Search engine",
+      "subtype": "search_engine",
+      "operator_id": null,
+      "n_requests": 121,
+      "total_bytes": 4143403,
+      "request_rate_per_min": 12.87,
+      "timing_cv": 0.31,
+      "asset_ratio": 0.108,
+      "sequential_score": 0.644,
+      "disallowed_hits": 1,
+      "robots_txt_fetched": true,
+      "rules_score": 3.0,
+      "rules_label": "Search engine",
+      "rules_reasons": [
+        "Requested 1 robots.txt-disallowed path(s) despite claiming to be SeekerBot",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Search engine",
+      "ml_confidence": 0.804,
+      "anomaly_risk": 48.8,
+      "anomaly_flag": false,
+      "hybrid_label": "Search engine",
+      "hybrid_score": 80.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "66.249.68.230||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "ip": "66.249.68.230",
+      "asn": "AS64510",
+      "user_agent": "Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "claimed_identity": "SeekerBot",
+      "true_category": "Search engine",
+      "subtype": "search_engine",
+      "operator_id": null,
+      "n_requests": 85,
+      "total_bytes": 4100024,
+      "request_rate_per_min": 12.98,
+      "timing_cv": 0.34,
+      "asset_ratio": 0.119,
+      "sequential_score": 0.548,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": true,
+      "rules_score": 0.0,
+      "rules_label": "Search engine",
+      "rules_reasons": [
+        "IP, ASN and TLS fingerprint are all consistent with SeekerBot's published infrastructure"
+      ],
+      "ml_pred": "Search engine",
+      "ml_confidence": 0.812,
+      "anomaly_risk": 52.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Search engine",
+      "hybrid_score": 81.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "66.249.68.86||Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "ip": "66.249.68.86",
+      "asn": "AS64510",
+      "user_agent": "Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html)",
+      "claimed_identity": "SeekerBot",
+      "true_category": "Search engine",
+      "subtype": "search_engine",
+      "operator_id": null,
+      "n_requests": 96,
+      "total_bytes": 3434686,
+      "request_rate_per_min": 18.11,
+      "timing_cv": 0.24,
+      "asset_ratio": 0.105,
+      "sequential_score": 0.688,
+      "disallowed_hits": 4,
+      "robots_txt_fetched": true,
+      "rules_score": 12.0,
+      "rules_label": "Search engine",
+      "rules_reasons": [
+        "Requested 4 robots.txt-disallowed path(s) despite claiming to be SeekerBot",
+        "Minor inconsistencies found, but identity signals are mostly consistent"
+      ],
+      "ml_pred": "Search engine",
+      "ml_confidence": 0.843,
+      "anomaly_risk": 50.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Search engine",
+      "hybrid_score": 84.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "66.249.72.11||Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+      "ip": "66.249.72.11",
+      "asn": "AS64505",
+      "user_agent": "Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+      "claimed_identity": "DeepIndexer",
+      "true_category": "Verified AI crawler",
+      "subtype": "verified_blocked_non_evading",
+      "operator_id": null,
+      "n_requests": 3,
+      "total_bytes": 90024,
+      "request_rate_per_min": 4.62,
+      "timing_cv": 0.44,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.0,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": true,
+      "rules_score": 0.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "DeepIndexer is fully disallowed by robots.txt/WAF and was blocked (403) on most requests; no disguised follow-up traffic was linked to it"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.849,
+      "anomaly_risk": 93.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 85.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 94/100) despite otherwise looking like Verified AI crawler -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "66.249.72.226||Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+      "ip": "66.249.72.226",
+      "asn": "AS64505",
+      "user_agent": "Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+      "claimed_identity": "DeepIndexer",
+      "true_category": "Verified AI crawler",
+      "subtype": "pre_evasion",
+      "operator_id": "operator_04",
+      "n_requests": 5,
+      "total_bytes": 129193,
+      "request_rate_per_min": 4.76,
+      "timing_cv": 0.33,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.0,
+      "disallowed_hits": 1,
+      "robots_txt_fetched": true,
+      "rules_score": 0.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "DeepIndexer is fully disallowed by robots.txt/WAF and was blocked (403) on most requests; no disguised follow-up traffic was linked to it"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.911,
+      "anomaly_risk": 81.2,
+      "anomaly_flag": true,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 91.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 81/100) despite otherwise looking like Verified AI crawler -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "66.249.72.47||Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+      "ip": "66.249.72.47",
+      "asn": "AS64505",
+      "user_agent": "Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)",
+      "claimed_identity": "DeepIndexer",
+      "true_category": "Verified AI crawler",
+      "subtype": "pre_evasion",
+      "operator_id": "operator_01",
+      "n_requests": 5,
+      "total_bytes": 112198,
+      "request_rate_per_min": 4.0,
+      "timing_cv": 0.47,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.0,
+      "disallowed_hits": 1,
+      "robots_txt_fetched": true,
+      "rules_score": 0.0,
+      "rules_label": "Verified AI crawler",
+      "rules_reasons": [
+        "DeepIndexer is fully disallowed by robots.txt/WAF and was blocked (403) on most requests; no disguised follow-up traffic was linked to it"
+      ],
+      "ml_pred": "Verified AI crawler",
+      "ml_confidence": 0.939,
+      "anomaly_risk": 87.5,
+      "anomaly_flag": true,
+      "hybrid_label": "Verified AI crawler",
+      "hybrid_score": 94.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree",
+        "Anomaly detection flagged this client as a behavioral outlier (risk 88/100) despite otherwise looking like Verified AI crawler -- surfaced for extra review without changing the label"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "68.110.203.224||Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "ip": "68.110.203.224",
+      "asn": "AS65059",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 27,
+      "total_bytes": 1986385,
+      "request_rate_per_min": 3.24,
+      "timing_cv": 0.83,
+      "asset_ratio": 0.519,
+      "sequential_score": 0.167,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.872,
+      "anomaly_risk": 3.7,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 87.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "68.241.106.129||Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "ip": "68.241.106.129",
+      "asn": "AS64804",
+      "user_agent": "Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler)",
+      "claimed_identity": "NovaCrawler",
+      "true_category": "Spoofed crawler",
+      "subtype": "spoofed",
+      "operator_id": null,
+      "n_requests": 108,
+      "total_bytes": 3073803,
+      "request_rate_per_min": 17.61,
+      "timing_cv": 0.24,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.39,
+      "disallowed_hits": 22,
+      "robots_txt_fetched": false,
+      "rules_score": 72.0,
+      "rules_label": "Spoofed crawler",
+      "rules_reasons": [
+        "Claims to be NovaCrawler but its IP address falls outside NovaCrawler's declared ranges",
+        "Claims to be NovaCrawler but its network (ASN) doesn't match NovaCrawler's declared infrastructure",
+        "Requested 22 robots.txt-disallowed path(s) despite claiming to be NovaCrawler"
+      ],
+      "ml_pred": "Spoofed crawler",
+      "ml_confidence": 0.8,
+      "anomaly_risk": 78.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Spoofed crawler",
+      "hybrid_score": 80.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "68.5.249.7||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "68.5.249.7",
+      "asn": "AS64780",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Undeclared bot",
+      "subtype": "undeclared_scraper",
+      "operator_id": null,
+      "n_requests": 119,
+      "total_bytes": 3134751,
+      "request_rate_per_min": 33.52,
+      "timing_cv": 0.31,
+      "asset_ratio": 0.0,
+      "sequential_score": 0.88,
+      "disallowed_hits": 39,
+      "robots_txt_fetched": false,
+      "rules_score": 100.0,
+      "rules_label": "Undeclared bot",
+      "rules_reasons": [
+        "Claims to be chrome but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser",
+        "Request timing is unusually regular (low variance) -- typical of a script, not a person",
+        "Pages were requested in near-perfect site order -- typical of systematic crawling",
+        "Never loaded any CSS/JS/image sub-resources despite claiming to be a browser",
+        "missing Accept-Language despite claiming a browser",
+        "missing Sec-CH-UA despite claiming chrome",
+        "claims chrome but 94% of requests fingerprint as a scripting library, not a browser",
+        "Requested 39 robots.txt-disallowed path(s)"
+      ],
+      "ml_pred": "Undeclared bot",
+      "ml_confidence": 0.984,
+      "anomaly_risk": 63.7,
+      "anomaly_flag": true,
+      "hybrid_label": "Undeclared bot",
+      "hybrid_score": 100.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": "This client claims to be nan from 68.5.249.7 (ASN AS64780), sending 119 requests at ~33.5 req/min. The rule-based check flagged: Claims to be chrome but its dominant TLS fingerprint matches a scripting library (python-requests/curl/Go), not a real browser; Request timing is unusually regular (low variance) -- typical of a script, not a person. The machine-learning model independently predicted \"Undeclared bot\" (98% confidence). Its behavioral-outlier score was moderate (64/100). Overall hybrid risk score: 100/100 (\"Undeclared bot\"). This combination of signals warrants review -- it is not, on its own, proof of malicious intent."
+    },
+    {
+      "client_key": "74.137.108.100||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+      "ip": "74.137.108.100",
+      "asn": "AS64978",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "tricky:screen_reader",
+      "operator_id": null,
+      "n_requests": 40,
+      "total_bytes": 4024031,
+      "request_rate_per_min": 2.49,
+      "timing_cv": 1.72,
+      "asset_ratio": 0.6,
+      "sequential_score": 0.214,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.795,
+      "anomaly_risk": 17.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 79.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "83.41.71.57||Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "ip": "83.41.71.57",
+      "asn": "AS65064",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 73,
+      "total_bytes": 6324773,
+      "request_rate_per_min": 2.77,
+      "timing_cv": 3.28,
+      "asset_ratio": 0.671,
+      "sequential_score": 0.182,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.984,
+      "anomaly_risk": 21.3,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 98.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "83.78.188.25||Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "83.78.188.25",
+      "asn": "AS65073",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Human",
+      "subtype": "regular",
+      "operator_id": null,
+      "n_requests": 71,
+      "total_bytes": 6271482,
+      "request_rate_per_min": 0.79,
+      "timing_cv": 4.85,
+      "asset_ratio": 0.592,
+      "sequential_score": 0.107,
+      "disallowed_hits": 0,
+      "robots_txt_fetched": false,
+      "rules_score": 0.0,
+      "rules_label": "Human",
+      "rules_reasons": [
+        "Irregular timing, normal asset loading, and non-sequential browsing look human"
+      ],
+      "ml_pred": "Human",
+      "ml_confidence": 0.95,
+      "anomaly_risk": 22.5,
+      "anomaly_flag": false,
+      "hybrid_label": "Human",
+      "hybrid_score": 95.0,
+      "hybrid_reasons": [
+        "Rules and the ML model agree"
+      ],
+      "linked_to_blocked_client": false,
+      "suspected_operator_cluster": null,
+      "analyst_note": null
+    },
+    {
+      "client_key": "91.160.63.38||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "91.160.63.38",
+      "asn": "AS64710",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Block evader",
+      "subtype": "block_evader",
+      "operator_id": "operator_02",
+      "n_requests": 16,
+      "total_bytes": 939940,
+      "request_rate_per_min": 20.43,
+      "timing_cv": 0.73,
+      "asset_ratio": 0.25,
+      "sequential_score": 0.4,
+      "disallowed_hits": 6,
+      "robots_txt_fetched": false,
+      "rules_score": 90.0,
+      "rules_label": "Block evader",
+      "rules_reasons": [
+        "Appeared 14 minutes after a declared crawler was blocked, requesting 40% of the same pages from a new IP/ASN under a generic browser identity -- consistent with block evasion"
+      ],
+      "ml_pred": "Block evader",
+      "ml_confidence": 0.959,
+      "anomaly_risk": 65.0,
+      "anomaly_flag": true,
+      "hybrid_label": "Block evader",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Linked to a recently blocked declared crawler identity (treated as decisive)"
+      ],
+      "linked_to_blocked_client": true,
+      "suspected_operator_cluster": [
+        "18.97.0.62",
+        "ByteHarvest/2.0 (+https://byteharvestdata.example/faq)"
+      ],
+      "analyst_note": null
+    },
+    {
+      "client_key": "95.205.98.104||Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "ip": "95.205.98.104",
+      "asn": "AS64816",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "claimed_identity": null,
+      "true_category": "Block evader",
+      "subtype": "block_evader",
+      "operator_id": "operator_01",
+      "n_requests": 28,
+      "total_bytes": 1549801,
+      "request_rate_per_min": 10.18,
+      "timing_cv": 0.71,
+      "asset_ratio": 0.179,
+      "sequential_score": 0.176,
+      "disallowed_hits": 5,
+      "robots_txt_fetched": false,
+      "rules_score": 90.0,
+      "rules_label": "Block evader",
+      "rules_reasons": [
+        "Appeared 10 minutes after a declared crawler was blocked, requesting 67% of the same pages from a new IP/ASN under a generic browser identity -- consistent with block evasion"
+      ],
+      "ml_pred": "Block evader",
+      "ml_confidence": 0.929,
+      "anomaly_risk": 53.8,
+      "anomaly_flag": true,
+      "hybrid_label": "Block evader",
+      "hybrid_score": 90.0,
+      "hybrid_reasons": [
+        "Linked to a recently blocked declared crawler identity (treated as decisive)"
+      ],
+      "linked_to_blocked_client": true,
+      "suspected_operator_cluster": [
+        "66.249.72.47",
+        "Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html)"
+      ],
+      "analyst_note": null
+    }
+  ]
+}</script>
+<script>
+(function () {
+  "use strict";
+
+  const DATA = JSON.parse(document.getElementById("dashboard-data").textContent);
+  const CATEGORIES = DATA.categories;
+
+  const CAT_COLOR = {
+    "Human": "var(--cat-human)",
+    "Undeclared bot": "var(--cat-undeclared)",
+    "Verified AI crawler": "var(--cat-verified)",
+    "Spoofed crawler": "var(--cat-spoofed)",
+    "Search engine": "var(--cat-search)",
+    "Block evader": "var(--cat-evader)",
+  };
+  const METHOD_COLOR = {
+    "Rules": "var(--cat-human)",
+    "ML": "var(--cat-search)",
+    "Anomaly": "var(--cat-spoofed)",
+    "Hybrid": "var(--cat-verified)",
+  };
+
+  const fmtInt = d3.format(",");
+  const fmtPct1 = (x) => (x * 100).toFixed(1) + "%";
+  const fmtPct0 = (x) => Math.round(x * 100) + "%";
+  function fmtBytes(n) {
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + " GB";
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + " MB";
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + " KB";
+    return n + " B";
+  }
+
+  const tooltipEl = document.getElementById("tooltip");
+  function showTip(evt, html) {
+    tooltipEl.innerHTML = html;
+    tooltipEl.style.display = "block";
+    const pad = 14;
+    let x = evt.clientX + pad;
+    let y = evt.clientY + pad;
+    const rect = tooltipEl.getBoundingClientRect();
+    if (x + rect.width > window.innerWidth - 8) x = evt.clientX - rect.width - pad;
+    if (y + rect.height > window.innerHeight - 8) y = evt.clientY - rect.height - pad;
+    tooltipEl.style.left = x + "px";
+    tooltipEl.style.top = y + "px";
+  }
+  function hideTip() {
+    tooltipEl.style.display = "none";
+  }
+
+  document.getElementById("tabs").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-tab]");
+    if (!btn) return;
+    document.querySelectorAll("nav.tabs button").forEach((b) => b.classList.toggle("active", b === btn));
+    const id = btn.dataset.tab;
+    document.querySelectorAll("section.tabpanel").forEach((s) => s.classList.toggle("active", s.id === "tab-" + id));
+  });
+
+  function statTile(label, value, sub) {
+    return `<div class="stat-tile"><div class="label">${label}</div><div class="value">${value}${sub ? ` <small>${sub}</small>` : ""}</div></div>`;
+  }
+
+  const hs = DATA.headline_stats;
+  document.getElementById("stat-grid").innerHTML = [
+    statTile("Total requests", fmtInt(hs.total_requests)),
+    statTile("Total clients", fmtInt(hs.total_clients)),
+    statTile("Traffic from claimed AI crawlers", hs.pct_ai_crawler_traffic + "%"),
+    statTile("Of those claims, spoofed", hs.pct_ai_crawler_claims_spoofed + "%"),
+    statTile("Bandwidth from bot categories", hs.bot_bandwidth_pct + "%", fmtBytes(hs.bot_bandwidth_bytes)),
+  ].join("");
+
+  const le = DATA.block_evasion.linking_eval;
+  document.getElementById("evasion-stats").innerHTML = [
+    statTile("True block evaders", fmtInt(le.total_true_block_evaders)),
+    statTile("Linked by the detector", fmtInt(le.flagged_as_linked)),
+    statTile("Linked to the correct origin", fmtInt(le.correctly_linked_to_origin)),
+    statTile("Linking recall", fmtPct0(le.linking_recall)),
+    statTile("Linking precision", fmtPct0(le.linking_precision)),
+    statTile("False-positive links", fmtInt(le.false_positive_links)),
+  ].join("");
+
+  function horizontalBarChart(svgEl, data, opts) {
+    const { valueKey, labelKey, colorFn, valueFormat = fmtInt, width = 600, labelWidth = 150 } = opts;
+    const barHeight = 20, gap = 10;
+    const svg = d3.select(svgEl);
+    svg.selectAll("*").remove();
+    const margin = { top: 4, right: 56, bottom: 4, left: labelWidth };
+    const innerW = Math.max(120, width - margin.left - margin.right);
+    const height = data.length * (barHeight + gap) - gap + margin.top + margin.bottom;
+    svg.attr("viewBox", `0 0 ${width} ${height}`);
+    const maxVal = d3.max(data, (d) => d[valueKey]) || 1;
+    const x = d3.scaleLinear().domain([0, maxVal]).nice().range([0, innerW]);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const rows = g
+      .selectAll("g.row")
+      .data(data)
+      .join("g")
+      .attr("class", "row")
+      .attr("transform", (d, i) => `translate(0,${i * (barHeight + gap)})`);
+
+    rows
+      .append("text")
+      .attr("x", -8)
+      .attr("y", barHeight / 2)
+      .attr("dy", "0.32em")
+      .attr("text-anchor", "end")
+      .text((d) => d[labelKey]);
+
+    rows
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("height", barHeight)
+      .attr("rx", 4)
+      .attr("width", (d) => Math.max(2, x(d[valueKey])))
+      .attr("fill", (d) => (colorFn ? colorFn(d) : "var(--accent)"))
+      .style("cursor", "default")
+      .on("mousemove", (e, d) => showTip(e, `<b>${d[labelKey]}</b><br>${valueFormat(d[valueKey])}`))
+      .on("mouseleave", hideTip);
+
+    rows
+      .append("text")
+      .attr("x", (d) => x(d[valueKey]) + 6)
+      .attr("y", barHeight / 2)
+      .attr("dy", "0.32em")
+      .attr("fill", "var(--text-secondary)")
+      .text((d) => valueFormat(d[valueKey]));
+  }
+
+  function groupedBarChart(svgEl, groups, seriesNames, opts) {
+    const { colorOf, valueFormat = fmtPct0, width = 600, height = 260, yDomain = [0, 1], legendEl } = opts;
+    const svg = d3.select(svgEl);
+    svg.selectAll("*").remove();
+    const margin = { top: 10, right: 10, bottom: 34, left: 38 };
+    const innerW = width - margin.left - margin.right;
+    const innerH = height - margin.top - margin.bottom;
+    svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+    const x0 = d3.scaleBand().domain(groups.map((g) => g.label)).range([0, innerW]).paddingInner(0.3).paddingOuter(0.1);
+    const x1 = d3.scaleBand().domain(seriesNames).range([0, x0.bandwidth()]).padding(0.08);
+    const y = d3.scaleLinear().domain(yDomain).nice().range([innerH, 0]);
+
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    g.append("g")
+      .selectAll("line")
+      .data(y.ticks(5))
+      .join("line")
+      .attr("class", "gridline")
+      .attr("x1", 0).attr("x2", innerW)
+      .attr("y1", (d) => y(d)).attr("y2", (d) => y(d));
+
+    g.append("g")
+      .selectAll("text")
+      .data(y.ticks(5))
+      .join("text")
+      .attr("x", -8).attr("y", (d) => y(d)).attr("dy", "0.32em")
+      .attr("text-anchor", "end")
+      .text((d) => valueFormat(d));
+
+    g.append("line").attr("class", "axis-line").attr("x1", 0).attr("x2", innerW).attr("y1", innerH).attr("y2", innerH);
+
+    const groupG = g
+      .selectAll("g.group")
+      .data(groups)
+      .join("g")
+      .attr("class", "group")
+      .attr("transform", (d) => `translate(${x0(d.label)},0)`);
+
+    groupG
+      .selectAll("rect")
+      .data((d) => seriesNames.map((s) => ({ series: s, label: d.label, value: d.values[s] ?? 0 })))
+      .join("rect")
+      .attr("x", (d) => x1(d.series))
+      .attr("y", (d) => y(Math.max(0, d.value)))
+      .attr("width", Math.max(2, x1.bandwidth()))
+      .attr("height", (d) => Math.max(0, innerH - y(Math.max(0, d.value))))
+      .attr("rx", 3)
+      .attr("fill", (d) => colorOf(d.series))
+      .on("mousemove", (e, d) => showTip(e, `<b>${d.label}</b><br>${d.series}: ${valueFormat(d.value)}`))
+      .on("mouseleave", hideTip);
+
+    g.append("g")
+      .selectAll("text")
+      .data(groups)
+      .join("text")
+      .attr("x", (d) => x0(d.label) + x0.bandwidth() / 2)
+      .attr("y", innerH + 18)
+      .attr("text-anchor", "middle")
+      .text((d) => d.label);
+
+    if (legendEl) {
+      legendEl.innerHTML = seriesNames
+        .map((s) => `<div class="item"><span class="swatch" style="background:${colorOf(s)}"></span>${s}</div>`)
+        .join("");
+    }
+  }
+
+  {
+    const data = CATEGORIES.map((c) => ({ category: c, requests: DATA.traffic_share_by_category[c] || 0 })).sort(
+      (a, b) => b.requests - a.requests
+    );
+    horizontalBarChart(document.getElementById("chart-traffic-share"), data, {
+      valueKey: "requests",
+      labelKey: "category",
+      colorFn: (d) => CAT_COLOR[d.category],
+      width: 560,
+      labelWidth: 150,
+    });
+  }
+
+  {
+    const ids = DATA.top_claimed_identities.filter((d) => d.is_ai_crawler);
+    const groups = ids.map((d) => ({ label: d.identity, values: { Verified: d.verified_count, Spoofed: d.spoofed_count } }));
+    const maxV = d3.max(groups, (g) => Math.max(g.values.Verified, g.values.Spoofed)) || 1;
+    groupedBarChart(document.getElementById("chart-identities"), groups, ["Verified", "Spoofed"], {
+      colorOf: (s) => (s === "Verified" ? "var(--cat-verified)" : "var(--cat-spoofed)"),
+      valueFormat: (v) => fmtInt(Math.round(v)),
+      yDomain: [0, maxV],
+      width: 560,
+      height: 240,
+      legendEl: document.getElementById("chart-identities").parentElement.querySelector(".legend") || (() => {
+        const el = document.createElement("div");
+        el.className = "legend";
+        document.getElementById("chart-identities").after(el);
+        return el;
+      })(),
+    });
+  }
+
+  {
+    const rows = DATA.robots_violations.slice(0, 25);
+    const tbl = document.getElementById("table-violations");
+    tbl.innerHTML =
+      "<thead><tr><th>Client</th><th>True category</th><th>Claimed identity</th><th class='num'>Disallowed hits</th></tr></thead><tbody>" +
+      rows
+        .map(
+          (r) =>
+            `<tr><td class="mono">${shortKey(r.client_key_str)}</td><td>${badge(r.category)}</td><td>${r.claimed_identity ?? "—"}</td><td class="num">${r.disallowed_hits}</td></tr>`
+        )
+        .join("") +
+      "</tbody>";
+    if (!rows.length) tbl.innerHTML = "<tbody><tr><td>No robots.txt violations recorded.</td></tr></tbody>";
+  }
+
+  function shortKey(k) {
+    const parts = k.split("||");
+    return parts[0];
+  }
+  function badge(cat) {
+    return `<span class="badge" style="background:${CAT_COLOR[cat] || "var(--text-muted)"}">${cat}</span>`;
+  }
+
+  {
+    const mc = DATA.method_comparison;
+    const groups = CATEGORIES.map((cat) => ({
+      label: cat,
+      values: {
+        Rules: mc.rules.report[cat] ? mc.rules.report[cat].recall : 0,
+        ML: mc.ml.report[cat] ? mc.ml.report[cat].recall : 0,
+        Anomaly: mc.anomaly.flag_rate_by_category[cat] ?? 0,
+        Hybrid: mc.hybrid.report[cat] ? mc.hybrid.report[cat].recall : 0,
+      },
+    }));
+    const legendEl = document.createElement("div");
+    legendEl.className = "legend";
+    document.getElementById("chart-method-recall").after(legendEl);
+    groupedBarChart(document.getElementById("chart-method-recall"), groups, ["Rules", "ML", "Anomaly", "Hybrid"], {
+      colorOf: (s) => METHOD_COLOR[s],
+      valueFormat: fmtPct0,
+      yDomain: [0, 1],
+      width: 1000,
+      height: 280,
+      legendEl,
+    });
+  }
+
+  {
+    const items = Object.entries(DATA.feature_importance)
+      .slice(0, 12)
+      .map(([feature, importance]) => ({ feature: niceFeatureName(feature), importance }));
+    horizontalBarChart(document.getElementById("chart-feature-importance"), items, {
+      valueKey: "importance",
+      labelKey: "feature",
+      colorFn: () => "var(--accent)",
+      valueFormat: (v) => v.toFixed(3),
+      width: 560,
+      labelWidth: 170,
+    });
+  }
+  function niceFeatureName(f) {
+    return f
+      .replace(/_num$/, "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  {
+    const anomaly = DATA.method_comparison.anomaly;
+    document.getElementById("anomaly-auc-hint").textContent =
+      `ROC-AUC (any-bot vs. human): ${anomaly.roc_auc}. Flag rate per true category at risk ≥ 50 — ~half this traffic is bot traffic, so a single hard threshold is less meaningful than the ranking itself.`;
+    const data = CATEGORIES.map((c) => ({ category: c, rate: anomaly.flag_rate_by_category[c] ?? 0 })).sort(
+      (a, b) => b.rate - a.rate
+    );
+    horizontalBarChart(document.getElementById("chart-anomaly-flagrate"), data, {
+      valueKey: "rate",
+      labelKey: "category",
+      colorFn: (d) => CAT_COLOR[d.category],
+      valueFormat: fmtPct0,
+      width: 560,
+      labelWidth: 150,
+    });
+  }
+
+  function renderConfusionMatrix(container, title, matrix, labels) {
+    const cell = 50, labelW = 150, labelH = 70;
+    const width = labelW + labels.length * cell + 10;
+    const height = labelH + labels.length * cell + 10;
+    const wrap = document.createElement("div");
+    wrap.style.marginBottom = "22px";
+    wrap.innerHTML = `<div style="font-weight:600;font-size:0.86rem;margin-bottom:8px;">${title}</div>`;
+    const svgWrap = document.createElement("div");
+    svgWrap.style.overflowX = "auto";
+    wrap.appendChild(svgWrap);
+    container.appendChild(wrap);
+
+    const svg = d3.select(svgWrap).append("svg").attr("class", "chart").attr("viewBox", `0 0 ${width} ${height}`).style("width", Math.min(width, 760) + "px");
+    const maxCell = d3.max(matrix.flat()) || 1;
+    const seq = d3.scaleLinear().domain([0, maxCell]).range([0, 1]);
+    const colorSteps = ["var(--surface-raised)", "var(--seq-100)", "var(--seq-200)", "var(--seq-300)", "var(--seq-400)", "var(--seq-500)", "var(--seq-600)", "var(--seq-700)"];
+    function cellColor(v) {
+      if (v === 0) return "var(--surface-raised)";
+      const t = seq(v);
+      const idx = Math.min(colorSteps.length - 1, 1 + Math.floor(t * (colorSteps.length - 2)));
+      return colorSteps[idx];
+    }
+    const rowMax = matrix.map((row) => d3.max(row) || 1);
+
+    const g = svg.append("g").attr("transform", `translate(${labelW},${labelH})`);
+
+    g.selectAll("text.collabel")
+      .data(labels)
+      .join("text")
+      .attr("class", "collabel")
+      .attr("x", (d, i) => i * cell + cell / 2)
+      .attr("y", -10)
+      .attr("text-anchor", "start")
+      .attr("transform", (d, i) => `rotate(-35, ${i * cell + cell / 2}, -10)`)
+      .text((d) => d);
+
+    g.selectAll("text.rowlabel")
+      .data(labels)
+      .join("text")
+      .attr("class", "rowlabel")
+      .attr("x", -8)
+      .attr("y", (d, i) => i * cell + cell / 2)
+      .attr("dy", "0.32em")
+      .attr("text-anchor", "end")
+      .text((d) => d);
+
+    labels.forEach((rowLabel, i) => {
+      labels.forEach((colLabel, j) => {
+        const v = matrix[i][j];
+        const rowTotal = d3.sum(matrix[i]) || 1;
+        g.append("rect")
+          .attr("x", j * cell)
+          .attr("y", i * cell)
+          .attr("width", cell - 2)
+          .attr("height", cell - 2)
+          .attr("rx", 3)
+          .attr("fill", cellColor(v))
+          .on("mousemove", (e) =>
+            showTip(e, `True: <b>${rowLabel}</b><br>Predicted: <b>${colLabel}</b><br>${v} client(s) (${fmtPct0(v / rowTotal)} of true ${rowLabel})`)
+          )
+          .on("mouseleave", hideTip);
+        g.append("text")
+          .attr("x", j * cell + (cell - 2) / 2)
+          .attr("y", i * cell + (cell - 2) / 2)
+          .attr("dy", "0.32em")
+          .attr("text-anchor", "middle")
+          .attr("fill", v / rowMax[i] > 0.55 ? "#0b0b0b" : "var(--text-secondary)")
+          .text(v || "");
+      });
+    });
+  }
+
+  {
+    const el = document.getElementById("confusion-matrices");
+    el.innerHTML = "";
+    renderConfusionMatrix(el, "Rules", DATA.method_comparison.rules.confusion_matrix, CATEGORIES);
+    renderConfusionMatrix(el, "ML (5-fold out-of-fold)", DATA.method_comparison.ml.confusion_matrix, CATEGORIES);
+    renderConfusionMatrix(el, "Hybrid", DATA.method_comparison.hybrid.confusion_matrix, CATEGORIES);
+    renderConfusionMatrix(el, "Anomaly detection (binary flag, risk ≥ 50)", DATA.method_comparison.anomaly.binary_confusion_matrix, ["Human", "Any bot/crawler"]);
+  }
+
+  {
+    const mc = DATA.method_comparison;
+    const data = [
+      { method: "Rules", value: mc.rules.report.accuracy },
+      { method: "ML (OOF)", value: mc.ml.report.accuracy },
+      { method: "Anomaly (ROC-AUC)", value: mc.anomaly.roc_auc },
+      { method: "Hybrid", value: mc.hybrid.report.accuracy },
+    ];
+    horizontalBarChart(document.getElementById("chart-overall-accuracy"), data, {
+      valueKey: "value",
+      labelKey: "method",
+      colorFn: (d) => METHOD_COLOR[d.method.split(" ")[0]] || "var(--accent)",
+      valueFormat: (v) => v.toFixed(3),
+      width: 560,
+      labelWidth: 150,
+    });
+  }
+
+  {
+    const clusters = DATA.block_evasion.clusters;
+    const list = document.getElementById("cluster-list");
+    if (!clusters.length) {
+      list.innerHTML = "<li>No operator clusters detected.</li>";
+    } else {
+      list.innerHTML = clusters
+        .map((c) => {
+          const blockedShort = shortKey(c.blocked_client_key);
+          const disguised = c.disguised_client_keys.map(shortKey).join(", ");
+          return `<li class="cluster-card">
+            <div class="title">Blocked identity <span class="mono">${blockedShort}</span> &rarr; ${c.n_disguised_clients} disguised client(s)</div>
+            <div class="meta">
+              Disguised IPs: <span class="mono">${disguised}</span><br>
+              Distinct ASNs among disguised clients: ${c.distinct_asns}<br>
+              Average link confidence: ${fmtPct0(c.avg_link_confidence)}
+            </div>
+          </li>`;
+        })
+        .join("");
+    }
+  }
+
+  {
+    const catSel = document.getElementById("filter-category");
+    CATEGORIES.forEach((c) => catSel.insertAdjacentHTML("beforeend", `<option value="${c}">${c}</option>`));
+    const verdictSel = document.getElementById("filter-verdict");
+    CATEGORIES.forEach((c) => verdictSel.insertAdjacentHTML("beforeend", `<option value="${c}">${c}</option>`));
+
+    const columns = [
+      { key: "client", label: "Client", sort: (d) => d.ip },
+      { key: "true_category", label: "True category", sort: (d) => d.true_category },
+      { key: "claimed_identity", label: "Claims", sort: (d) => d.claimed_identity || "" },
+      { key: "n_requests", label: "Reqs", num: true, sort: (d) => d.n_requests },
+      { key: "rules_score", label: "Rules", num: true, sort: (d) => d.rules_score },
+      { key: "ml_pred", label: "ML", sort: (d) => d.ml_pred },
+      { key: "anomaly_risk", label: "Anomaly", num: true, sort: (d) => d.anomaly_risk },
+      { key: "hybrid_label", label: "Hybrid verdict", sort: (d) => d.hybrid_label },
+      { key: "hybrid_score", label: "Risk", num: true, sort: (d) => d.hybrid_score },
+    ];
+
+    const thead = document.querySelector("#table-clients thead");
+    thead.innerHTML =
+      "<tr>" + columns.map((c) => `<th class="sortable${c.num ? " num" : ""}" data-key="${c.key}">${c.label} <span class="arrow"></span></th>`).join("") + "</tr>";
+
+    let sortKey = "hybrid_score";
+    let sortDir = -1;
+
+    thead.addEventListener("click", (e) => {
+      const th = e.target.closest("th.sortable");
+      if (!th) return;
+      const key = th.dataset.key;
+      if (sortKey === key) sortDir *= -1;
+      else {
+        sortKey = key;
+        sortDir = 1;
+      }
+      render();
+    });
+
+    function riskColor(score) {
+      if (score >= 75) return "var(--critical)";
+      if (score >= 55) return "var(--serious)";
+      if (score >= 35) return "var(--warning)";
+      return "var(--good)";
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function render() {
+      const q = document.getElementById("filter-search").value.trim().toLowerCase();
+      const catFilter = catSel.value;
+      const verdictFilter = verdictSel.value;
+
+      let rows = DATA.clients.filter((d) => {
+        if (catFilter && d.true_category !== catFilter) return false;
+        if (verdictFilter && d.hybrid_label !== verdictFilter) return false;
+        if (q) {
+          const hay = (d.ip + " " + d.asn + " " + d.user_agent + " " + (d.claimed_identity || "")).toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      const col = columns.find((c) => c.key === sortKey);
+      rows = rows.slice().sort((a, b) => {
+        const av = col.sort(a), bv = col.sort(b);
+        if (av < bv) return -1 * sortDir;
+        if (av > bv) return 1 * sortDir;
+        return 0;
+      });
+
+      thead.querySelectorAll("th.sortable .arrow").forEach((a) => (a.textContent = ""));
+      const activeTh = thead.querySelector(`th[data-key="${sortKey}"] .arrow`);
+      if (activeTh) activeTh.textContent = sortDir === 1 ? "▲" : "▼";
+
+      const tbody = document.querySelector("#table-clients tbody");
+      tbody.innerHTML = "";
+      rows.forEach((d) => {
+        const tr = document.createElement("tr");
+        tr.className = "client-row";
+        tr.innerHTML = `
+          <td class="mono">${d.ip}<br><span style="color:var(--text-muted)">${d.asn}</span></td>
+          <td>${badge(d.true_category)}</td>
+          <td>${d.claimed_identity ?? "—"}</td>
+          <td class="num">${fmtInt(d.n_requests)}</td>
+          <td class="num">${d.rules_score.toFixed(0)}</td>
+          <td>${d.ml_pred}</td>
+          <td class="num">${d.anomaly_risk.toFixed(0)}${d.anomaly_flag ? " ⚑" : ""}</td>
+          <td>${badge(d.hybrid_label)}</td>
+          <td class="num"><span class="risk-pill"><span class="risk-dot" style="background:${riskColor(d.hybrid_score)}"></span>${d.hybrid_score.toFixed(0)}</span></td>
+        `;
+        const detailTr = document.createElement("tr");
+        detailTr.className = "detail-row";
+        detailTr.hidden = true;
+        const td = document.createElement("td");
+        td.colSpan = columns.length;
+        const rulesReasons = (d.rules_reasons || []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+        const hybridReasons = (d.hybrid_reasons || []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+        td.innerHTML = `
+          <div class="detail-grid">
+            <div>
+              <h4>User agent</h4>
+              <div class="mono" style="margin-bottom:10px;">${escapeHtml(d.user_agent)}</div>
+              <h4>Rule-based reasons (score ${d.rules_score.toFixed(0)}, verdict ${d.rules_label})</h4>
+              <ul>${rulesReasons || "<li>No notable signals.</li>"}</ul>
+            </div>
+            <div>
+              <h4>Hybrid verdict reasoning</h4>
+              <ul>${hybridReasons || "<li>&mdash;</li>"}</ul>
+              <h4>Behavior</h4>
+              <ul>
+                <li>Request rate: ${d.request_rate_per_min} / min, timing CV ${d.timing_cv}</li>
+                <li>Asset ratio ${d.asset_ratio}, sequential score ${d.sequential_score}</li>
+                <li>Disallowed-path hits: ${d.disallowed_hits}, fetched robots.txt: ${d.robots_txt_fetched ? "yes" : "no"}</li>
+                ${d.linked_to_blocked_client ? `<li>Linked to blocked client <span class="mono">${shortKey(d.suspected_operator_cluster)}</span></li>` : ""}
+              </ul>
+            </div>
+          </div>
+          ${d.analyst_note ? `<h4 style="margin-top:12px;">Analyst note</h4><div class="analyst-note">${escapeHtml(d.analyst_note)}</div>` : ""}
+        `;
+        detailTr.appendChild(td);
+
+        tr.addEventListener("click", () => {
+          detailTr.hidden = !detailTr.hidden;
+        });
+
+        tbody.appendChild(tr);
+        tbody.appendChild(detailTr);
+      });
+    }
+
+    document.getElementById("filter-search").addEventListener("input", render);
+    catSel.addEventListener("change", render);
+    verdictSel.addEventListener("change", render);
+    render();
+  }
+})();
+
+</script>

@@ -1,0 +1,81 @@
+client_id,ip,user_agent,category,claimed_identity,subtype,operator_id
+client_0067,157.55.39.125,Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm),Search engine,FinderCrawl,search_engine,-
+client_0044,216.197.101.105,"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",Spoofed crawler,AlphaBot,spoofed,-
+client_0057,168.124.115.119,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Undeclared bot,-,undeclared_scraper,-
+client_0041,44.221.0.242,Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot),Verified AI crawler,QueryWeaver,verified,-
+client_0011,161.98.105.240,"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",Human,-,regular,-
+client_0051,122.105.129.163,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Undeclared bot,-,undeclared_scraper_impersonated,-
+client_0024,83.78.188.25,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0046,68.241.106.129,Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler),Spoofed crawler,NovaCrawler,spoofed,-
+client_0077,193.18.45.248,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Block evader,-,block_evader,operator_03
+client_0054,65.206.136.65,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Undeclared bot,-,undeclared_scraper,-
+client_0066,157.55.39.123,Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm),Search engine,FinderCrawl,search_engine,-
+client_0037,20.15.241.73,"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",Verified AI crawler,AlphaBot,verified,-
+client_0055,215.50.62.53,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",Undeclared bot,-,undeclared_scraper,-
+client_0033,141.129.168.204,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,tricky:office_nat,-
+client_0068,157.55.39.186,Mozilla/5.0 (compatible; FinderCrawl/2.0; +https://finderwebservices.example/bot.htm),Search engine,FinderCrawl,search_engine,-
+client_0060,46.34.130.225,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Undeclared bot,-,tricky:stealthy_scraper,-
+client_0004,207.116.89.238,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Human,-,regular,-
+client_0016,26.212.47.26,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Human,-,regular,-
+client_0025,178.242.247.184,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0069,66.249.72.47,Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html),Verified AI crawler,DeepIndexer,pre_evasion,operator_01
+client_0026,27.2.186.208,"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",Human,-,regular,-
+client_0027,120.74.55.234,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",Human,-,regular,-
+client_0002,20.34.232.243,"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",Human,-,regular,-
+client_0009,208.176.50.204,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",Human,-,regular,-
+client_0005,198.207.179.208,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0039,34.102.136.1,Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler),Verified AI crawler,NovaCrawler,verified,-
+client_0056,184.60.86.64,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Undeclared bot,-,undeclared_scraper,-
+client_0001,18.103.26.209,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0010,179.202.212.21,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Human,-,regular,-
+client_0006,192.94.209.240,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Human,-,regular,-
+client_0043,182.188.37.250,"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",Spoofed crawler,AlphaBot,spoofed,-
+client_0050,60.169.0.173,Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot),Spoofed crawler,QueryWeaver,spoofed,-
+client_0073,156.96.79.98,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Block evader,-,block_evader,operator_02
+client_0042,66.249.72.11,Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html),Verified AI crawler,DeepIndexer,verified_blocked_non_evading,-
+client_0007,83.41.71.57,"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",Human,-,regular,-
+client_0019,28.100.0.92,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Human,-,regular,-
+client_0062,66.249.68.161,Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html),Search engine,SeekerBot,search_engine,-
+client_0070,95.205.98.104,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Block evader,-,block_evader,operator_01
+client_0079,157.225.170.150,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Block evader,-,block_evader,operator_04
+client_0076,141.134.165.118,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Block evader,-,block_evader,operator_03
+client_0014,12.212.175.89,"Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36",Human,-,regular,-
+client_0059,68.5.249.7,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Undeclared bot,-,undeclared_scraper,-
+client_0071,32.247.206.141,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Block evader,-,block_evader,operator_01
+client_0035,20.15.241.157,"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",Verified AI crawler,AlphaBot,verified,-
+client_0049,21.203.57.66,Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot),Spoofed crawler,QueryWeaver,spoofed,-
+client_0021,197.45.162.43,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0013,153.160.54.91,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",Human,-,regular,-
+client_0047,61.112.244.55,Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler),Spoofed crawler,NovaCrawler,spoofed,-
+client_0008,148.189.100.7,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0015,107.184.209.108,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0017,180.229.110.12,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0020,29.65.37.198,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Human,-,regular,-
+client_0018,194.131.210.230,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Human,-,regular,-
+client_0030,119.82.82.227,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0045,200.44.187.13,"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",Spoofed crawler,AlphaBot,spoofed,-
+client_0064,66.249.66.17,Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html),Search engine,SeekerBot,search_engine,-
+client_0022,102.179.62.223,"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",Human,-,regular,-
+client_0074,91.160.63.38,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Block evader,-,block_evader,operator_02
+client_0065,66.249.66.214,Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html),Search engine,SeekerBot,search_engine,-
+client_0028,26.162.98.43,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",Human,-,regular,-
+client_0023,115.18.48.58,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0034,74.137.108.100,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",Human,-,tricky:screen_reader,-
+client_0036,20.15.240.68,"Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; AlphaBot/1.1; +https://alphaailabs.example/alphabot",Verified AI crawler,AlphaBot,verified,-
+client_0075,18.97.0.137,ByteHarvest/2.0 (+https://byteharvestdata.example/faq),Verified AI crawler,ByteHarvest,pre_evasion,operator_03
+client_0048,114.81.82.158,Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler),Spoofed crawler,NovaCrawler,spoofed,-
+client_0040,44.221.0.190,Mozilla/5.0 (compatible; QueryWeaver/1.0; +https://queryweaver.example/bot),Verified AI crawler,QueryWeaver,verified,-
+client_0032,129.82.51.39,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0,Human,-,tricky:privacy_browser,-
+client_0052,182.185.126.73,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",Undeclared bot,-,undeclared_scraper,-
+client_0029,164.84.56.129,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0038,34.102.137.65,Mozilla/5.0 (compatible; NovaCrawler/1.0; +https://novaresearch.example/novacrawler),Verified AI crawler,NovaCrawler,verified,-
+client_0012,51.32.155.223,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Human,-,regular,-
+client_0003,68.110.203.224,"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",Human,-,regular,-
+client_0058,110.76.105.182,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",Undeclared bot,-,undeclared_scraper,-
+client_0078,66.249.72.226,Mozilla/5.0 (compatible; DeepIndexer; +https://deepindexerlabs.example/bot.html),Verified AI crawler,DeepIndexer,pre_evasion,operator_04
+client_0061,66.249.68.230,Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html),Search engine,SeekerBot,search_engine,-
+client_0080,102.213.207.6,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Block evader,-,block_evader,operator_04
+client_0072,18.97.0.62,ByteHarvest/2.0 (+https://byteharvestdata.example/faq),Verified AI crawler,ByteHarvest,pre_evasion,operator_02
+client_0063,66.249.68.86,Mozilla/5.0 (compatible; SeekerBot/2.1; +https://seekersearch.example/bot.html),Search engine,SeekerBot,search_engine,-
+client_0053,182.56.208.161,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",Undeclared bot,-,undeclared_scraper,-
+client_0031,45.129.61.37,"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",Human,-,regular,-

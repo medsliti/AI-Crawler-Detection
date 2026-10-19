@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /private/
+Disallow: /api/
+
+User-agent: ByteHarvest
+Disallow: /
+
+User-agent: DeepIndexer
+Disallow: /
+
